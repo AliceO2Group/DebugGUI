@@ -1,0 +1,11 @@
+cmake_policy(SET CMP0074 NEW)
+
+cmake_minimum_required(VERSION 3.13.0 FATAL_ERROR)
+set(BUILD_SHARED_LIBS ON)
+set(CMAKE_CXX_STANDARD 17)
+
+find_package(GLFW NAMES glfw3 CONFIG)
+
+# Set CMAKE_INSTALL_LIBDIR explicitly to lib (to avoid lib64 on CC7)
+set(CMAKE_INSTALL_LIBDIR lib)
+add_subdirectory(DebugGUI)
