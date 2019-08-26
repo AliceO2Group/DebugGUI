@@ -23,7 +23,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #endif()
 
 if(GLFW_FOUND)
-message("FOO ${GLFW3_FOUND} ${GLFW_FOUND}")
   set(GUI_BACKEND
       src/imgui_impl_glfw_gl3.cpp
       src/gl3w.c
@@ -37,7 +36,7 @@ else()
   set(GUI_TARGET "")
 endif()
 
-add_library(O2DebugGUI SHARED
+add_library(DebugGUI SHARED
             src/imgui.cpp src/imgui_draw.cpp src/imgui_extras.cpp
             ${GUI_BACKEND})
 
@@ -50,36 +49,81 @@ set(HEADERS
   include/DebugGUI/DebugGUI.h
 )
 
-set_target_properties(O2DebugGUI PROPERTIES PUBLIC_HEADER "${HEADERS}")
-target_include_directories(O2DebugGUI PUBLIC
-                           ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(O2DebugGUI PUBLIC GLFW PRIVATE dl)
+set_target_properties(DebugGUI PROPERTIES PUBLIC_HEADER "${HEADERS}")
+set_target_properties(DebugGUI PROPERTIES OUTPUT_NAME "O2DebugGUI")
+
+target_include_directories(DebugGUI
+  PUBLIC
+    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+target_link_libraries(DebugGUI PUBLIC GLFW PRIVATE dl)
 
 if(GLFW_FOUND)
   add_executable(imgui_demo
                  test/test_ImGUI.cpp test/imgui_demo.cpp
                  )
-target_link_libraries(imgui_demo O2DebugGUI GLFW)
+  target_link_libraries(imgui_demo DebugGUI GLFW)
 endif()
 
 add_executable(ImGUIHeadless
                test/test_ImGUIHeadless.cpp test/imgui_demo.cpp
                )
-target_link_libraries(ImGUIHeadless O2DebugGUI)
+
+target_link_libraries(ImGUIHeadless DebugGUI)
 
 add_executable(test_DebugGUIGL
   test/test_DebugGUIGL.cxx
 )
-target_link_libraries(test_DebugGUIGL O2DebugGUI)
+target_link_libraries(test_DebugGUIGL DebugGUI)
 
 add_executable(test_DebugGUISokol
   test/test_DebugGUISokol.cxx
 )
-target_link_libraries(test_DebugGUISokol O2DebugGUI)
+target_link_libraries(test_DebugGUISokol DebugGUI)
 
-install(TARGETS imgui_demo ImGUIHeadless O2DebugGUI test_DebugGUISokol test_DebugGUIGL
+# Install
+include(GNUInstallDirs)
+
+# Create version file
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/cmake/DebugGUIConfigVersion.cmake"
+  VERSION ${PACKAGE_VERSION}
+  COMPATIBILITY AnyNewerVersion
+)
+
+install(TARGETS imgui_demo ImGUIHeadless DebugGUI test_DebugGUISokol test_DebugGUIGL
+  EXPORT
+  DebugGUITargets
   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
   LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
   ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include/DebugGUI
+)
+
+# Export targets
+install(EXPORT DebugGUITargets
+  FILE
+    DebugGUITargets.cmake
+  NAMESPACE
+    AliceO2::
+  DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/DebugGUI
+)
+
+# Configure and install Config files
+configure_package_config_file(
+  "${PROJECT_SOURCE_DIR}/cmake/DebugGUIConfig.cmake.in" cmake/DebugGUIConfig.cmake
+  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/DebugGUI"
+  PATH_VARS CMAKE_INSTALL_PREFIX
+)
+
+install(
+  FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/DebugGUIConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/DebugGUIConfigVersion.cmake"
+  DESTINATION
+  ${CMAKE_INSTALL_LIBDIR}/cmake/DebugGUI
 )

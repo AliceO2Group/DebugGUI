@@ -1,0 +1,19 @@
+@PACKAGE_INIT@
+
+set(DebugGUI_VERSION @PROJECT_VERSION@)
+
+get_filename_component(DebugGUI_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+list(APPEND CMAKE_MODULE_PATH ${DebugGUI_CMAKE_DIR})
+find_dependency(GLFW)
+
+list(REMOVE_AT CMAKE_MODULE_PATH -1)
+
+if(NOT TARGET AliceO2::DebugGUI)
+  include("${DebugGUI_CMAKE_DIR}/DebugGUITargets.cmake")
+endif()
+
+set(DebugGUI_LIBRARIES AliceO2::DebugGUI)
+
+message(STATUS "DebugGUI ${DebugGUI_VERSION} found")
