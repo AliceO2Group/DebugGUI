@@ -6,7 +6,7 @@ get_filename_component(DebugGUI_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
 list(APPEND CMAKE_MODULE_PATH ${DebugGUI_CMAKE_DIR})
-find_dependency(GLFW)
+find_dependency(GLFW NAMES glfw3 CONFIG)
 
 list(REMOVE_AT CMAKE_MODULE_PATH -1)
 

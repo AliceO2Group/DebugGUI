@@ -60,13 +60,13 @@ target_include_directories(DebugGUI
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-target_link_libraries(DebugGUI PUBLIC GLFW PRIVATE dl)
+target_link_libraries(DebugGUI PUBLIC glfw PRIVATE dl)
 
 if(GLFW_FOUND)
   add_executable(imgui_demo
                  test/test_ImGUI.cpp test/imgui_demo.cpp
                  )
-  target_link_libraries(imgui_demo DebugGUI GLFW)
+  target_link_libraries(imgui_demo DebugGUI glfw)
 endif()
 
 add_executable(ImGUIHeadless
