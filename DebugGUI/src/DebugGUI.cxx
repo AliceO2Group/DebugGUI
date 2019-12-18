@@ -1,6 +1,8 @@
 #include "imgui.h"
 #include "DebugGUI/imgui_impl_glfw_gl3.h"
 #include "DebugGUI/icons_font_awesome.h"
+// Needed by icons_font_awesome.ttf.h
+#include <cstdint>
 #include "icons_font_awesome.ttf.h"
 #include "GL/gl3w.h" // This example is using gl3w to access OpenGL functions (because it is small). You may use glew/glad/glLoadGen/etc. whatever already works for you.
 #include <GLFW/glfw3.h>
