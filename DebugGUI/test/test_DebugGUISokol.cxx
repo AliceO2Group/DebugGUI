@@ -9,6 +9,8 @@
 // or submit itself to any jurisdiction.
 #include "DebugGUI/DebugGUI.h"
 #include "DebugGUI/Sokol3DUtils.h"
+#include "DebugGUI/icons_font_awesome.h"
+#include "DebugGUI/imgui.h"
 
 using namespace o2::framework;
 using namespace o2::framework;
@@ -20,6 +22,9 @@ int main(int argc, char** argv)
 
   auto callback = []() -> void {
     sokol::render3D();
+    ImGui::Begin(ICON_FA_STAR "Test");
+    ImGui::Text("Some text");
+    ImGui::End();
   };
   while (pollGUI(context, callback)) {
   }
