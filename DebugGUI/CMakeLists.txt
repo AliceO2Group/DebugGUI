@@ -48,6 +48,7 @@ set(HEADERS
   include/DebugGUI/GL3DUtils.h
   include/DebugGUI/DebugGUI.h
   include/DebugGUI/imgui_impl_glfw_gl3.h
+  include/DebugGUI/icons_font_awesome.h
 )
 
 set_target_properties(DebugGUI PROPERTIES PUBLIC_HEADER "${HEADERS}")
