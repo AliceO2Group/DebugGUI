@@ -41,14 +41,14 @@ add_library(DebugGUI SHARED
             ${GUI_BACKEND})
 
 set(HEADERS
-  include/DebugGUI/imgui_extras.h
-  include/DebugGUI/imgui.h
-  include/DebugGUI/imconfig.h
-  include/DebugGUI/Sokol3DUtils.h
-  include/DebugGUI/GL3DUtils.h
-  include/DebugGUI/DebugGUI.h
-  include/DebugGUI/imgui_impl_glfw_gl3.h
-  include/DebugGUI/icons_font_awesome.h
+  src/imgui_extras.h
+  src/imgui.h
+  src/imconfig.h
+  src/Sokol3DUtils.h
+  src/GL3DUtils.h
+  src/DebugGUI.h
+  src/imgui_impl_glfw_gl3.h
+  src/icons_font_awesome.h
 )
 
 set_target_properties(DebugGUI PROPERTIES PUBLIC_HEADER "${HEADERS}")
@@ -57,9 +57,8 @@ set_target_properties(DebugGUI PROPERTIES OUTPUT_NAME "O2DebugGUI")
 target_include_directories(DebugGUI
   PUBLIC
     $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 if(GLFW_FOUND)
@@ -68,24 +67,27 @@ if(GLFW_FOUND)
                  test/test_ImGUI.cpp test/imgui_demo.cpp
                  )
   target_link_libraries(imgui_demo DebugGUI glfw)
+  add_dependencies(imgui_demo DebugGUI)
   set(GLFW_TESTS imgui_demo)
 endif()
 
 add_executable(ImGUIHeadless
                test/test_ImGUIHeadless.cpp test/imgui_demo.cpp
                )
-
+add_dependencies(imgui_demo DebugGUI)
 target_link_libraries(ImGUIHeadless DebugGUI)
 
 add_executable(test_DebugGUIGL
   test/test_DebugGUIGL.cxx
 )
 target_link_libraries(test_DebugGUIGL DebugGUI)
+add_dependencies(imgui_demo DebugGUI)
 
 add_executable(test_DebugGUISokol
   test/test_DebugGUISokol.cxx
 )
 target_link_libraries(test_DebugGUISokol DebugGUI)
+add_dependencies(imgui_demo DebugGUI)
 
 # Install
 include(GNUInstallDirs)
@@ -97,13 +99,19 @@ write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/cmake/DebugGUIConf
   COMPATIBILITY AnyNewerVersion
 )
 
-install(TARGETS ${GLFW_TESTS} ImGUIHeadless DebugGUI test_DebugGUISokol test_DebugGUIGL
+install(TARGETS ${GLFW_TESTS} DebugGUI
   EXPORT
   DebugGUITargets
   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
   LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
   ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include/DebugGUI
+)
+
+install(TARGETS ${GLFW_TESTS} ImGUIHeadless test_DebugGUISokol test_DebugGUIGL
+  EXPORT
+  DebugGUITestsTargets
+  RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
 
 # Export targets

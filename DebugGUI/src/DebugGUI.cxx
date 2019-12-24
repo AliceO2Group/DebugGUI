@@ -1,6 +1,6 @@
 #include "imgui.h"
-#include "DebugGUI/imgui_impl_glfw_gl3.h"
-#include "DebugGUI/icons_font_awesome.h"
+#include "imgui_impl_glfw_gl3.h"
+#include "icons_font_awesome.h"
 // Needed by icons_font_awesome.ttf.h
 #include <cstdint>
 #include "icons_font_awesome.ttf.h"

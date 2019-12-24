@@ -7,10 +7,10 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
-#include "DebugGUI/DebugGUI.h"
-#include "DebugGUI/Sokol3DUtils.h"
-#include "DebugGUI/icons_font_awesome.h"
-#include "DebugGUI/imgui.h"
+#include "DebugGUI.h"
+#include "Sokol3DUtils.h"
+#include "icons_font_awesome.h"
+#include "imgui.h"
 
 using namespace o2::framework;
 using namespace o2::framework;
