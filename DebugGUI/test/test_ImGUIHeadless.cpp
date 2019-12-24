@@ -1,4 +1,4 @@
-#include "DebugGUI/imgui.h"
+#include "imgui.h"
 #include <cstdio>
 
 static void error_callback(int error, const char* description)
