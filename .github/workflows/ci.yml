@@ -3,8 +3,17 @@ name: C/C++ CI
 on: [pull_request]
 
 jobs:
-  build:
-
+  build-full:
+    name: Full build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: alisw/alibuild-action@master
+      with:
+        package: DebugGUI
+        extra_packages: "cmake"
+  build-headless:
+    name: Headless (no GLFW) build
     runs-on: ubuntu-latest
     
     steps:
@@ -13,3 +22,4 @@ jobs:
       with:
         package: DebugGUI
         extra_packages: "cmake"
+        remove_packages: "glfw-devel"
