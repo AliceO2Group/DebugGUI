@@ -68,26 +68,23 @@ if(GLFW_FOUND)
                  )
   target_link_libraries(imgui_demo DebugGUI glfw)
   add_dependencies(imgui_demo DebugGUI)
+  add_executable(test_DebugGUIGL
+    test/test_DebugGUIGL.cxx
+  )
+  target_link_libraries(test_DebugGUIGL DebugGUI)
+
+  add_executable(test_DebugGUISokol
+    test/test_DebugGUISokol.cxx
+  )
+  target_link_libraries(test_DebugGUISokol DebugGUI)
   set(GLFW_TESTS imgui_demo)
 endif()
 
 add_executable(ImGUIHeadless
                test/test_ImGUIHeadless.cpp test/imgui_demo.cpp
                )
-add_dependencies(imgui_demo DebugGUI)
 target_link_libraries(ImGUIHeadless DebugGUI)
 
-add_executable(test_DebugGUIGL
-  test/test_DebugGUIGL.cxx
-)
-target_link_libraries(test_DebugGUIGL DebugGUI)
-add_dependencies(imgui_demo DebugGUI)
-
-add_executable(test_DebugGUISokol
-  test/test_DebugGUISokol.cxx
-)
-target_link_libraries(test_DebugGUISokol DebugGUI)
-add_dependencies(imgui_demo DebugGUI)
 
 # Install
 include(GNUInstallDirs)
