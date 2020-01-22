@@ -77,7 +77,7 @@ if(GLFW_FOUND)
     test/test_DebugGUISokol.cxx
   )
   target_link_libraries(test_DebugGUISokol DebugGUI)
-  set(GLFW_TESTS imgui_demo)
+  set(GLFW_TESTS imgui_demo test_DebugGUISokol test_DebugGUIGL)
 endif()
 
 add_executable(ImGUIHeadless
@@ -96,7 +96,7 @@ write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/cmake/DebugGUIConf
   COMPATIBILITY AnyNewerVersion
 )
 
-install(TARGETS ${GLFW_TESTS} DebugGUI
+install(TARGETS DebugGUI
   EXPORT
   DebugGUITargets
   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
@@ -105,7 +105,7 @@ install(TARGETS ${GLFW_TESTS} DebugGUI
   PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include/DebugGUI
 )
 
-install(TARGETS ${GLFW_TESTS} ImGUIHeadless test_DebugGUISokol test_DebugGUIGL
+install(TARGETS ${GLFW_TESTS} ImGUIHeadless
   EXPORT
   DebugGUITestsTargets
   RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
