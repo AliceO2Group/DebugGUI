@@ -49,9 +49,6 @@ set(HEADERS
   src/DebugGUI.h
   src/imgui_impl_glfw_gl3.h
   src/icons_font_awesome.h
-  src/HandMadeMath.h
-  src/GL/gl3w.h
-  src/GL/glcorearb.h
 )
 
 set_target_properties(DebugGUI PROPERTIES PUBLIC_HEADER "${HEADERS}")
@@ -137,4 +134,19 @@ install(
     "${CMAKE_CURRENT_BINARY_DIR}/cmake/DebugGUIConfigVersion.cmake"
   DESTINATION
   ${CMAKE_INSTALL_LIBDIR}/cmake/DebugGUI
+)
+
+install(
+  FILES
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/HandMadeMath.h"
+  DESTINATION
+  ${CMAKE_INSTALL_PREFIX}/include
+)
+
+install(
+  DIRECTORY
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/GL"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/KHR"
+  DESTINATION
+  ${CMAKE_INSTALL_PREFIX}/include
 )
