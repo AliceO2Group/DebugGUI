@@ -37,13 +37,13 @@ int main(int, char**)
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
     // 2. Show another simple window, this time using an explicit Begin/End pair
-    ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiCond_FirstUseEver);
     ImGui::Begin("Another Window", &show_another_window);
     ImGui::Text("Hello");
     ImGui::End();
 
-    ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiSetCond_FirstUseEver);
-    ImGui::ShowDemoWindow(nullptr, true);
+    ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
+    ImGui::ShowDemoWindow(nullptr);
 
     ImGui::Render();
   }
