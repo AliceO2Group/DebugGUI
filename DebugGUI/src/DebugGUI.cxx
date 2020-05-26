@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <functional>
 
-static void error_callback(int error, const char* description)
+static void default_error_callback(int error, const char* description)
 {
   fprintf(stderr, "Error %d: %s\n", error, description);
 }
@@ -20,10 +20,12 @@ namespace framework
 {
 
 // @return an object of kind GLFWwindow* as void* to avoid having a direct dependency
-void* initGUI(const char* name)
+void* initGUI(const char* name, void(*error_callback)(int, char const*description))
 {
   // Setup window
-  glfwSetErrorCallback(error_callback);
+  if (error_callback == nullptr) {
+    glfwSetErrorCallback(default_error_callback);
+  }
   if (!glfwInit())
     return nullptr;
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
