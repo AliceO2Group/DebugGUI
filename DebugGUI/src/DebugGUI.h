@@ -12,16 +12,15 @@
 
 #include <functional>
 
-namespace o2
-{
-namespace framework
-{
+namespace o2::framework {
 
-void* initGUI(const char* name);
+/// Default implementation of the error callback
+void default_error_callback(int, const char*);
+
+void* initGUI(const char* name, decltype(default_error_callback) = nullptr);
 bool pollGUI(void* context, std::function<void(void)> guiCallback);
 void disposeGUI();
 
-} // namespace framework
-} // namespace o2
+} // namespace o2::framework
 
 #endif // FRAMEWORK_DEBUGGUI_H
