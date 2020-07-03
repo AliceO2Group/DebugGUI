@@ -15,7 +15,9 @@
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
 #include <memory>
+#ifndef TRACY_NO_FILESELECTOR
 #include "../nfd/nfd.h"
+#endif
 #include <sys/stat.h>
 #include <locale.h>
 
@@ -636,6 +638,7 @@ static void DrawContents()
             }
         }
         ImGui::SameLine( 0, ImGui::GetFontSize() * 2 );
+#ifndef TRACY_NO_FILESELECTOR
         if( ImGui::Button( ICON_FA_FOLDER_OPEN " Open saved trace" ) && !loadThread.joinable() )
         {
             nfdchar_t* fn;
@@ -675,6 +678,7 @@ static void DrawContents()
                 }
             }
         }
+#endif // TRACY_NO_FILESELECTOR
 
         if( badVer.state != tracy::BadVersionState::Ok )
         {

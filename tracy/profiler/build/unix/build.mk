@@ -19,10 +19,6 @@ UNAME := $(shell uname -s)
 ifeq ($(UNAME),Darwin)
 	SRC3 += ../../../nfd/nfd_cocoa.m
 	LIBS +=  -framework CoreFoundation -framework AppKit
-else
-	SRC2 += ../../../nfd/nfd_gtk.c
-	INCLUDES += $(shell pkg-config --cflags gtk+-2.0)
-	LIBS += $(shell pkg-config --libs gtk+-2.0) -lGL
 endif
 
 TBB := $(shell ld -ltbb -o /dev/null 2>/dev/null; echo $$?)
