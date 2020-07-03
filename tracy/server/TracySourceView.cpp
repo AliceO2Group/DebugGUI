@@ -3532,6 +3532,7 @@ void SourceView::CheckWrite( int line, RegsX86 reg, int limit )
     }
 }
 
+#ifndef TRACY_NO_FILESELECTOR
 void SourceView::Save( const Worker& worker, size_t start, size_t stop )
 {
     assert( start < m_asm.size() );
@@ -3614,5 +3615,6 @@ void SourceView::Save( const Worker& worker, size_t start, size_t stop )
         }
     }
 }
+#endif // TRACY_NO_FILESELECTOR
 
 }
