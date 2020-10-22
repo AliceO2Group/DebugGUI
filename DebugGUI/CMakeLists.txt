@@ -25,6 +25,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(GLFW_FOUND)
   set(GUI_BACKEND
       src/imgui_impl_glfw_gl3.cpp
+      src/implot.cpp
+      src/implot_items.cpp
       src/gl3w.c
       src/Sokol3DUtils.cxx
       src/GL3DUtils.cxx
@@ -43,6 +45,8 @@ add_library(DebugGUI SHARED
 set(HEADERS
   src/imgui_extras.h
   src/imgui.h
+  src/implot.h
+  src/implot_internal.h
   src/imconfig.h
   src/Sokol3DUtils.h
   src/GL3DUtils.h
@@ -64,7 +68,7 @@ target_include_directories(DebugGUI
 if(GLFW_FOUND)
   target_link_libraries(DebugGUI PUBLIC glfw PRIVATE dl)
   add_executable(imgui_demo
-                 test/test_ImGUI.cpp test/imgui_demo.cpp
+                 test/test_ImGUI.cpp test/imgui_demo.cpp test/implot_demo.cpp
                  )
   target_link_libraries(imgui_demo DebugGUI glfw)
   add_dependencies(imgui_demo DebugGUI)
@@ -77,6 +81,7 @@ if(GLFW_FOUND)
     test/test_DebugGUISokol.cxx
   )
   target_link_libraries(test_DebugGUISokol DebugGUI)
+
   set(GLFW_TESTS imgui_demo test_DebugGUISokol test_DebugGUIGL)
 endif()
 
