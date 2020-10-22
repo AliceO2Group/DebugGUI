@@ -1,4 +1,5 @@
 #include "imgui.h"
+#include "implot.h"
 #include "imgui_impl_glfw_gl3.h"
 #include "icons_font_awesome.h"
 // Needed by icons_font_awesome.ttf.h
@@ -49,6 +50,7 @@ void* initGUI(const char* name, void(*error_callback)(int, char const*descriptio
   ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true; icons_config.FontDataOwnedByAtlas = false;
   io.Fonts->AddFontFromMemoryTTF((void*)s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf), 12.0f, &icons_config, icons_ranges);
 
+  ImPlot::CreateContext();
   return window;
 }
 
@@ -81,6 +83,7 @@ bool pollGUI(void* context, std::function<void(void)> guiCallback)
 
 void disposeGUI()
 {
+  ImPlot::DestroyContext();
   // Cleanup
   ImGui_ImplGlfwGL3_Shutdown();
   glfwTerminate();
