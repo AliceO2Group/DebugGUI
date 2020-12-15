@@ -22,7 +22,28 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 #endif()
 
-if(GLFW_FOUND)
+if(APPLE)
+  set(GUI_BACKEND
+      src/imgui_impl_metal.mm
+      src/imgui_impl_glfw.cpp
+      src/implot.cpp
+      src/implot_items.cpp
+#      src/Sokol3DUtils.cxx
+      src/HandMade3DImpl.cxx
+      src/DebugGUIMacos.mm)
+  set(HEADERS
+    src/imgui_extras.h
+    src/imgui.h
+    src/implot.h
+    src/implot_internal.h
+    src/imconfig.h
+#    src/Sokol3DUtils.h
+    src/DebugGUI.h
+    src/imgui_impl_glfw.h
+    src/icons_font_awesome.h
+  )
+  set(GUI_TARGET glfw)
+elseif(GLFW_FOUND)
   set(GUI_BACKEND
       src/imgui_impl_glfw_gl3.cpp
       src/implot.cpp
@@ -32,9 +53,33 @@ if(GLFW_FOUND)
       src/GL3DUtils.cxx
       src/HandMade3DImpl.cxx
       src/DebugGUI.cxx)
+  set(HEADERS
+    src/imgui_extras.h
+    src/imgui.h
+    src/implot.h
+    src/implot_internal.h
+    src/imconfig.h
+    src/Sokol3DUtils.h
+    src/GL3DUtils.h
+    src/DebugGUI.h
+    src/imgui_impl_glfw_gl3.h
+    src/icons_font_awesome.h
+  )
   set(GUI_TARGET glfw)
 else()
   set(GUI_BACKEND src/Dummy3DUtils.cxx src/DummyDebugGUI.cxx)
+  set(HEADERS
+    src/imgui_extras.h
+    src/imgui.h
+    src/implot.h
+    src/implot_internal.h
+    src/imconfig.h
+    src/Sokol3DUtils.h
+    src/GL3DUtils.h
+    src/DebugGUI.h
+    src/imgui_impl_glfw_gl3.h
+    src/icons_font_awesome.h
+  )
   set(GUI_TARGET "")
 endif()
 
@@ -42,21 +87,16 @@ add_library(DebugGUI SHARED
             src/imgui.cpp src/imgui_draw.cpp src/imgui_extras.cpp src/imgui_widgets.cpp
             ${GUI_BACKEND})
 
-set(HEADERS
-  src/imgui_extras.h
-  src/imgui.h
-  src/implot.h
-  src/implot_internal.h
-  src/imconfig.h
-  src/Sokol3DUtils.h
-  src/GL3DUtils.h
-  src/DebugGUI.h
-  src/imgui_impl_glfw_gl3.h
-  src/icons_font_awesome.h
-)
-
 set_target_properties(DebugGUI PROPERTIES PUBLIC_HEADER "${HEADERS}")
 set_target_properties(DebugGUI PROPERTIES OUTPUT_NAME "O2DebugGUI")
+if (APPLE)
+find_library(METAL Metal)
+find_library(CF CoreFoundation)
+find_library(FOUNDATION Foundation)
+find_library(QUARTZ_CORE QuartzCore)
+set_target_properties(DebugGUI PROPERTIES COMPILE_FLAGS "-fobjc-arc")
+set(MACOS_FRAMEWORKS ${METAL} ${CF} ${FOUNDATION} ${QUARTZ_CORE})
+endif()
 
 target_include_directories(DebugGUI
   PUBLIC
@@ -65,7 +105,14 @@ target_include_directories(DebugGUI
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
-if(GLFW_FOUND)
+if(APPLE)
+  target_link_libraries(DebugGUI PUBLIC glfw ${MACOS_FRAMEWORKS} PRIVATE dl)
+  add_executable(imgui_demo
+                 test/test_DebugGUIMetal.cxx test/imgui_demo.cpp test/implot_demo.cpp
+                 )
+  target_link_libraries(imgui_demo DebugGUI glfw)
+  set(GLFW_TESTS imgui_demo)
+elseif(GLFW_FOUND)
   target_link_libraries(DebugGUI PUBLIC glfw PRIVATE dl)
   add_executable(imgui_demo
                  test/test_ImGUI.cpp test/imgui_demo.cpp test/implot_demo.cpp
@@ -81,8 +128,8 @@ if(GLFW_FOUND)
     test/test_DebugGUISokol.cxx
   )
   target_link_libraries(test_DebugGUISokol DebugGUI)
-
   set(GLFW_TESTS imgui_demo test_DebugGUISokol test_DebugGUIGL)
+
 endif()
 
 add_executable(ImGUIHeadless
