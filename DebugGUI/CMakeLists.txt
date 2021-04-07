@@ -84,7 +84,7 @@ else()
 endif()
 
 add_library(DebugGUI SHARED
-            src/imgui.cpp src/imgui_draw.cpp src/imgui_extras.cpp src/imgui_widgets.cpp
+            src/imgui.cpp src/imgui_draw.cpp src/imgui_extras.cpp src/imgui_tables.cpp src/imgui_widgets.cpp
             ${GUI_BACKEND})
 
 set_target_properties(DebugGUI PROPERTIES PUBLIC_HEADER "${HEADERS}")
