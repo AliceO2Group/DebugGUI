@@ -77,6 +77,7 @@ bool pollGUI(void* context, std::function<void(void)> guiCallback)
     guiCallback();
   }
   ImGui::Render();
+  ImGui_ImplGlfwGL3_RenderDrawLists(ImGui::GetDrawData());
   glfwSwapBuffers(window);
   return true;
 }

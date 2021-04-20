@@ -7,10 +7,12 @@
 // https://github.com/ocornut/imgui
 
 struct GLFWwindow;
+struct ImDrawData;
 
 IMGUI_API bool        ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks);
 IMGUI_API void        ImGui_ImplGlfwGL3_Shutdown();
 IMGUI_API void        ImGui_ImplGlfwGL3_NewFrame();
+IMGUI_API void        ImGui_ImplGlfwGL3_RenderDrawLists(ImDrawData* draw_data);
 
 // Use if you want to reset your rendering device without losing ImGui state.
 IMGUI_API void        ImGui_ImplGlfwGL3_InvalidateDeviceObjects();
