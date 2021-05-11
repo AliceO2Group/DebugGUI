@@ -5,8 +5,12 @@
 x64
 Release
 Debug
+_build
+_compiler
+tools/*
 *.d
 *.o
+*.so
 *.swp
 imgui.ini
 test/tracy_test
@@ -27,3 +31,9 @@ vcpkg/*
 !vcpkg/install_vcpkg_dependencies.bat
 .deps/
 .dirstamp
+.vscode/
+
+/_*/**
+/**/__pycache__/**
+extra/vswhere.exe
+extra/tracy-build
