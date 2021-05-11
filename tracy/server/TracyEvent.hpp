@@ -9,6 +9,7 @@
 
 #include "TracyCharUtil.hpp"
 #include "TracyShortPtr.hpp"
+#include "TracySortedVector.hpp"
 #include "TracyVector.hpp"
 #include "tracy_robin_hood.h"
 #include "../common/TracyForceInline.hpp"
@@ -93,13 +94,6 @@ public:
 private:
     uint8_t m_idx[3];
 };
-
-struct __StringIdxOld
-{
-    uint32_t idx    : 31;
-    uint32_t active : 1;
-};
-
 
 class Int24
 {
@@ -214,9 +208,29 @@ struct ZoneExtra
     Int24 callstack;
     StringIdx text;
     StringIdx name;
+    Int24 color;
 };
 
 enum { ZoneExtraSize = sizeof( ZoneExtra ) };
+
+
+// This union exploits the fact that the current implementations of x64 and arm64 do not provide
+// full 64 bit address space. The high bits must be bit-extended, so 0x80... is an invalid pointer.
+// This allows using the highest bit as a selector between a native pointer and a table index here.
+union CallstackFrameId
+{
+    struct
+    {
+        uint64_t idx : 62;
+        uint64_t sel : 1;
+        uint64_t custom : 1;
+    };
+    uint64_t data;
+};
+
+enum { CallstackFrameIdSize = sizeof( CallstackFrameId ) };
+
+static tracy_force_inline bool operator==( const CallstackFrameId& lhs, const CallstackFrameId& rhs ) { return lhs.data == rhs.data; }
 
 
 struct SampleData
@@ -226,6 +240,15 @@ struct SampleData
 };
 
 enum { SampleDataSize = sizeof( SampleData ) };
+
+
+struct SampleDataRange
+{
+    Int48 time;
+    CallstackFrameId ip;
+};
+
+enum { SampleDataRangeSize = sizeof( SampleDataRange ) };
 
 
 struct LockEvent
@@ -374,24 +397,6 @@ struct CallstackFrameData
 };
 
 enum { CallstackFrameDataSize = sizeof( CallstackFrameData ) };
-
-// This union exploits the fact that the current implementations of x64 and arm64 do not provide
-// full 64 bit address space. The high bits must be bit-extended, so 0x80... is an invalid pointer.
-// This allows using the highest bit as a selector between a native pointer and a table index here.
-union CallstackFrameId
-{
-    struct
-    {
-        uint64_t idx : 62;
-        uint64_t sel : 1;
-        uint64_t custom : 1;
-    };
-    uint64_t data;
-};
-
-enum { CallstackFrameIdSize = sizeof( CallstackFrameId ) };
-
-static tracy_force_inline bool operator==( const CallstackFrameId& lhs, const CallstackFrameId& rhs ) { return lhs.data == rhs.data; }
 
 
 struct CallstackFrameTree
@@ -569,11 +574,16 @@ struct GpuCtxData
     int64_t timeDiff;
     uint64_t thread;
     uint64_t count;
-    uint8_t accuracyBits;
     float period;
+    GpuContextType type;
+    bool hasPeriod;
+    bool hasCalibration;
+    int64_t calibratedGpuTime;
+    int64_t calibratedCpuTime;
+    double calibrationMod;
+    StringIdx name;
     unordered_flat_map<uint64_t, GpuCtxThreadData> threadData;
     short_ptr<GpuEvent> query[64*1024];
-    GpuContextType type;
 };
 
 enum { GpuCtxDataSize = sizeof( GpuCtxData ) };
@@ -627,12 +637,12 @@ enum class PlotValueFormatting : uint8_t
 
 struct PlotData
 {
+    struct PlotItemSort { bool operator()( const PlotItem& lhs, const PlotItem& rhs ) { return lhs.time.Val() < rhs.time.Val(); }; };
+
     uint64_t name;
     double min;
     double max;
-    Vector<PlotItem> data;
-    Vector<PlotItem> postpone;
-    uint64_t postponeTime;
+    SortedVector<PlotItem, PlotItemSort> data;
     PlotType type;
     PlotValueFormatting format;
 };
@@ -646,6 +656,8 @@ struct MemData
     uint64_t low = std::numeric_limits<uint64_t>::max();
     uint64_t usage = 0;
     PlotData* plot = nullptr;
+    bool reconstruct = false;
+    uint64_t name = 0;
 };
 
 struct FrameData

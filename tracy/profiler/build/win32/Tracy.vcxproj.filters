@@ -22,6 +22,9 @@
     <Filter Include="zstd">
       <UniqueIdentifier>{c67291b2-9e67-4915-b80f-6891ceb683a3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="imgui\freetype">
+      <UniqueIdentifier>{1a9a9fea-82b2-41df-9d0e-ef4b00ed1213}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\common\tracy_lz4.cpp">
@@ -42,6 +45,9 @@
     <ClCompile Include="..\..\src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\NativeWindow.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\libs\gl3w\GL\gl3w.c">
       <Filter>gl3w</Filter>
     </ClCompile>
@@ -56,9 +62,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\server\TracyBadVersion.cpp">
       <Filter>server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\imgui_freetype.cpp">
-      <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\winmain.cpp">
       <Filter>src</Filter>
@@ -201,6 +204,27 @@
     <ClCompile Include="..\..\..\server\TracyMicroArchitecture.cpp">
       <Filter>server</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\server\TracyMouse.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\HttpRequest.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\server\TracyStackFrames.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui\imgui_tables.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\imgui\misc\freetype\imgui_freetype.cpp">
+      <Filter>imgui\freetype</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\server\TracySourceTokenizer.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\server\TracySourceContents.cpp">
+      <Filter>server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\common\tracy_lz4.hpp">
@@ -306,9 +330,6 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Cousine.hpp">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\imgui_freetype.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\server\TracyBuzzAnim.hpp">
@@ -491,11 +512,38 @@
     <ClInclude Include="..\..\..\server\TracyMicroArchitecture.hpp">
       <Filter>server</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\server\TracyMouse.hpp">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\NativeWindow.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\HttpRequest.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\server\TracyStackFrames.hpp">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\server\TracySortedVector.hpp">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\imgui\misc\freetype\imgui_freetype.h">
+      <Filter>imgui\freetype</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\server\TracySourceTokenizer.hpp">
+      <Filter>server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\server\TracySourceContents.hpp">
+      <Filter>server</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="DebugVis.natvis" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Tracy.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="Tracy.manifest" />
   </ItemGroup>
 </Project>
