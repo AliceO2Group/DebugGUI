@@ -11,9 +11,15 @@ project(DebugGUI
   LANGUAGES C CXX
 )
 
-
 find_package(GLFW NAMES glfw3 CONFIG)
 
 # Set CMAKE_INSTALL_LIBDIR explicitly to lib (to avoid lib64 on CC7)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo"
+    CACHE
+    STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel Coverage."
+    FORCE
+  )
+endif()
 set(CMAKE_INSTALL_LIBDIR lib)
 add_subdirectory(DebugGUI)
