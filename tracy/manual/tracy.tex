@@ -137,7 +137,9 @@ There's much more Tracy can do, which can be explored by carefully reading this 
 \section{A quick look at Tracy Profiler}
 \label{quicklook}
 
-Tracy is a real-time, nanosecond resolution \emph{hybrid frame and sampling profiler} that can be used for remote or embedded telemetry of games and other applications. It can profile CPU (C, C++11, Lua), GPU (OpenGL, Vulkan, Direct3D 12, OpenCL) and memory. It also can monitor locks held by threads and show where contention does happen.
+Tracy is a real-time, nanosecond resolution \emph{hybrid frame and sampling profiler} that can be used for remote or
+embedded telemetry of games and other applications. It can profile CPU (C, C++11, Lua), GPU (OpenGL, Vulkan, Direct3D
+11/12, OpenCL) and memory. It also can monitor locks held by threads and show where contention does happen.
 
 While Tracy can perform statistical analysis of sampled call stack data, just like other \emph{statistical profilers} (such as VTune, perf or Very Sleepy), it mainly focuses on manual markup of the source code, which allows frame-by-frame inspection of the program execution. You will be able to see exactly which functions are called, how much time is spent in them, and how do they interact with each other in a multi-threaded environment. In contrast, the statistical analysis may show you the hot spots in your code, but it is unable to accurately pinpoint the underlying cause for semi-random frame stutter that may occur every couple of seconds.
 
@@ -914,6 +916,7 @@ logo=\bcattention
 ]{Caveats}
 \begin{itemize}
 \item Frame images are compressed on a second client profiler thread\footnote{Small part of compression task is performed on the server.}, to reduce memory usage of queued images. This might have impact on the performance of the profiled application.
+\item This second thread will be periodically woken up, even if there are no frame images to compress\footnote{This way of doing things is required to prevent a deadlock in specific circumstances.}. If you are not using the frame image capture functionality and you don't wish this thread to be running, you can define the \texttt{TRACY\_NO\_FRAME\_IMAGE} macro.
 \item Due to implementation details of the network buffer, single frame image cannot be greater than 256 KB after compression. Note that a $960\times540$ image fits in this limit.
 \end{itemize}
 \end{bclogo}
@@ -1313,7 +1316,7 @@ To mark that a separate memory pool is to be tracked you should use the named ve
 \subsection{GPU profiling}
 \label{gpuprofiling}
 
-Tracy provides bindings for profiling OpenGL, Vulkan, Direct3D 12 and OpenCL execution time on GPU.
+Tracy provides bindings for profiling OpenGL, Vulkan, Direct3D 11, Direct3D 12 and OpenCL execution time on GPU.
 
 Note that the CPU and GPU timers may be not synchronized, unless a calibrated context is created. Since availability of calibrated contexts is limited, you can correct the desynchronization of uncalibrated contexts in the profiler's options (section~\ref{options}).
 
@@ -1372,6 +1375,14 @@ In order to maintain synchronization between CPU and GPU time domains, you will 
 
 To enable calibrated context, replace the macro \texttt{TracyVkContext} with \texttt{TracyVkContextCalibrated} and pass the two functions as additional parameters, in the order specified above.
 
+\subsubsection{Direct3D 11}
+
+To enable Direct3D 11 support, include the \texttt{tracy/TracyD3D11.hpp} header file, and create a \texttt{TracyD3D11Ctx} object with the \texttt{TracyD3D11Context(device, devicecontext)} macro. The object should later be cleaned up with the \texttt{TracyD3D11Destroy} macro. Tracy does not support D3D11 command lists. To set a custom name for the context, use the \texttt{TracyGpuContextName(name, size)} macro.
+
+To mark a GPU zone, use the \texttt{TracyD3D11Zone(name)} macro, where \texttt{name} is a string literal name of the zone. Alternatively you may use \texttt{TracyD3D11ZoneC(name, color)} to specify zone color.
+
+You also need to periodically collect the GPU events using the \texttt{TracyD3D11Collect} macro. A good place to do it is after the swap chain present function.
+
 \subsubsection{Direct3D 12}
 
 To enable Direct3D 12 support, include the \texttt{tracy/TracyD3D12.hpp} header file. Tracing Direct3D 12 queues is nearly on par with the Vulkan implementation, where a \texttt{TracyD3D12Ctx} is returned from a call to \texttt{TracyD3D12Context(device, queue)}, which should be later cleaned up with the \texttt{TracyD3D12Destroy(ctx)} macro. Multiple contexts can be created, each with any queue type. To set a custom name for the context, use the \texttt{TracyD3D12ContextName(ctx, name, size)} macro.
@@ -1400,13 +1411,13 @@ Similarly to Vulkan and OpenGL, you also need to periodically collect the OpenCL
 
 Putting more than one GPU zone macro in a single scope features the same issue as with the \texttt{ZoneScoped} macros, described in section~\ref{multizone} (but this time the variable name is \texttt{\_\_\_tracy\_gpu\_zone}).
 
-To solve this problem, in case of OpenGL use the \texttt{TracyGpuNamedZone} macro in place of \texttt{TracyGpuZone} (or the color variant). The same applies to Vulkan and Direct3D 12 -- replace \texttt{TracyVkZone} with \texttt{TracyVkNamedZone} and \texttt{TracyD3D12Zone} with \texttt{TracyD3D12NamedZone}.
+To solve this problem, in case of OpenGL use the \texttt{TracyGpuNamedZone} macro in place of \texttt{TracyGpuZone} (or the color variant). The same applies to Vulkan and Direct3D 11/12 -- replace \texttt{TracyVkZone} with \texttt{TracyVkNamedZone} and \texttt{TracyD3D11Zone}/\texttt{TracyD3D12Zone} with \texttt{TracyD3D11NamedZone}/\texttt{TracyD3D12NamedZone}.
 
 Remember that you need to provide your own name for the created stack variable as the first parameter to the macros.
 
 \subsubsection{Transient GPU zones}
 
-Transient zones (see section~\ref{transientzones} for details) are available in OpenGL, Vulkan, and Direct3D 12 macros.
+Transient zones (see section~\ref{transientzones} for details) are available in OpenGL, Vulkan, and Direct3D 11/12 macros.
 
 \subsection{Collecting call stacks}
 \label{collectingcallstacks}
@@ -1828,7 +1839,7 @@ Manual markup of zones doesn't cover every function existing in a program and ca
 
 This feature requires privilege elevation, as described in chapter~\ref{privilegeelevation}. Proper setup of the required program debugging data is described in chapter~\ref{collectingcallstacks}.
 
-On Windows sampling is performed at 8 kHz frequency (which is the maximum possible value), and on Linux and Android it is performed at 10 kHz.
+By default sampling is performed at 8 kHz frequency on Windows (which is the maximum possible value). On Linux and Android it is performed at 10 kHz. This value can be changed by providing the sampling frequency (in Hz) through the \texttt{TRACY\_SAMPLING\_HZ} macro.
 
 Call stack sampling may be disabled by using the \texttt{TRACY\_NO\_SAMPLING} define.
 
@@ -1949,7 +1960,7 @@ Both connecting to a client and opening a saved trace will present you with the 
 
 If this is a real-time capture, you will also have access to the connection information pop-up (figure~\ref{connectioninfo}) through the \emph{\faWifi{}~Connection} button, with the capture status similar to the one displayed by the command line utility. This dialog also displays the connection speed graphed over time and the profiled application's current frames per second and frame time measurements. The \emph{Query backlog} consists of two numbers. The first one represents the number of queries that were held back due to the bandwidth volume overwhelming the available network send buffer. The second one shows how many queries are in-flight, meaning requests which were sent to the client, but weren't yet answered. While these numbers drains down to zero, the performance of real time profiling may be temporarily compromised. The circle displayed next to the bandwidth graph signals the connection status. If it's red, the connection is active. If it's gray, the client has disconnected.
 
-You can use the \faSave{}~\emph{Save trace} button to save the current profile data to a file\footnote{This should be taken literally. If a live capture is in progress and a save is performed, some data may be missing from the capture and won't be saved.}. Use the \faPlug{}~\emph{Stop} button to disconnect from the client\footnote{While requesting disconnect stops retrieval of any new events, the profiler will wait for any data that is still pending for the current set of events.}. The \faExclamationTriangle{}~\emph{Discard} button is used to discard current trace.
+You can use the \faSave{}~\emph{Save trace} button to save the current profile data to a file\footnote{This should be taken literally. If a live capture is in progress and a save is performed, some data may be missing from the capture and won't be saved.}. The available compression modes are discussed in sections~\ref{archival} and~\ref{fidict}. Use the \faPlug{}~\emph{Stop} button to disconnect from the client\footnote{While requesting disconnect stops retrieval of any new events, the profiler will wait for any data that is still pending for the current set of events.}. The \faExclamationTriangle{}~\emph{Discard} button is used to discard current trace.
 
 \begin{figure}[h]
 \centering\begin{tikzpicture}
@@ -2006,6 +2017,7 @@ old.tracy (0.3.0) {916.4 MB} -> new.tracy (0.4.0) {349.4 MB, 31.53%}  9.7 s, 38.
 The new file contains the same data as the old one, but in the updated internal representation. Note that to perform an upgrade, whole trace needs to be loaded to memory.
 
 \subsubsection{Archival mode}
+\label{archival}
 
 The \texttt{update} utility supports optional higher levels of data compression, which reduce disk size of traces, at the cost of increased compression times. With the default settings, the output files have a reasonable size and are quick to save and load. A list of available compression modes and their respective results is available in table~\ref{compressiontimes} and figures~\ref{savesize}, \ref{savetime} and~\ref{loadtime}. Compression mode selection is controlled by the following command line options:
 
@@ -2115,6 +2127,15 @@ The \texttt{update} utility supports optional higher levels of data compression,
 Trace files created using the \emph{default}, \emph{hc} and \emph{extreme} modes are optimized for fast decompression and can be further compressed using file compression utilities. For example, using 7-zip results in archives of the following sizes: 77.2 MB, 54.3 MB, 52.4 MB.
 
 For archival purposes it is however much better to use the \emph{zstd} compression modes, which are faster, compress trace files more tightly, and are directly loadable by the profiler, without the intermediate decompression step.
+
+\subsubsection{Frame images dictionary}
+\label{fidict}
+
+Frame images have to be compressed individually, so that there are no delays during random access to contents of any image. Unfortunately, because of this there is no reuse of compression state between similar (or even identical) images, which leads to increased memory consumption. This can be partially remedied by enabling calculation of an optional frame images dictionary with the \texttt{-d} command line parameter.
+
+Saving a trace with frame images dictionary enabled will need some extra time, which will depend on the amount of image data you have captured. Loading such trace will also be slower, but not by much. How much RAM will be saved by the dictionary depends on the similarity of frame images. Be aware that post-processing effects such as artificial film grain have a subtle effect on image contents, which is significant in this case.
+
+The dictionary cannot be used when you are capturing a trace.
 
 \subsubsection{Data removal}
 \label{dataremoval}
@@ -2300,7 +2321,7 @@ When a zone is displayed in the find zone window (section~\ref{findzone}), the c
 
 Moving the \faMousePointer{} mouse cursor over the frames displayed on the graph will display tooltip with information about frame number, frame time, frame image (if available, see chapter~\ref{frameimages}), etc. Such tooltips are common for many UI elements in the profiler and won't be mentioned later in the manual.
 
-The timeline view may be focused on the frames, by clicking or dragging the \LMB{}~left mouse button on the graph. The graph may be scrolled left and right by dragging the \RMB{}~right mouse button over the graph. The view may be zoomed in and out by using the \Scroll{}~mouse scroll. If the view is zoomed out, so that multiple frames are merged into one column, the highest frame time will be used to represent the given column.
+The timeline view may be focused on the frames, by clicking or dragging the \LMB{}~left mouse button on the graph. The graph may be scrolled left and right by dragging the \RMB{}~right mouse button over the graph. The view may be zoomed in and out by using the \Scroll{}~mouse wheel. If the view is zoomed out, so that multiple frames are merged into one column, the highest frame time will be used to represent the given column.
 
 Clicking the \LMB{}~left mouse button on the graph while the \keys{\ctrl}~key is pressed will open the frame image playback window (section~\ref{playback}) and set the playback to the selected frame. See section~\ref{frameimages} for more information about frame images.
 
@@ -2593,7 +2614,7 @@ Hovering the \faMousePointer{} mouse pointer over the timeline view will display
 
 The timeline view may be scrolled both vertically and horizontally by dragging the \RMB{} right mouse button. Note that only the zones, locks and plots scroll vertically, while the time scale and frame sets always stay on the top.
 
-You can zoom in and out the timeline view by using the \Scroll{} mouse scroll. You can select a range to which you want to zoom-in by dragging the \MMB{} middle mouse button. Dragging the \MMB{} middle mouse button while the \keys{\ctrl} key is pressed will zoom-out.
+You can zoom in and out the timeline view by using the \Scroll{}~mouse wheel. Pressing the \keys{\ctrl} key will make zooming more precise, while pressing the \keys{\shift} key will make it faster. You can select a range to which you want to zoom-in by dragging the \MMB{} middle mouse button. Dragging the \MMB{} middle mouse button while the \keys{\ctrl} key is pressed will zoom-out.
 
 \subsection{Time ranges}
 \label{timeranges}
@@ -3244,6 +3265,8 @@ An assembly instruction may be associated with only a single source line, but a 
 
 If automated call stack sampling (see chapter~\ref{sampling}) was performed, additional profiling information will be available. The first column of source and assembly views will contain percentage counts of collected instruction pointer samples for each displayed line, both in numerical and graphical bar form. This information can be used to determine which line of the function takes the most time. The displayed percentage values are heat map color coded, with the lowest values mapped to dark red, and the highest values mapped to bright yellow. The color code will appear next to the percentage value, and on the scroll bar, so that 'hot' places in code can be identified at a glance.
 
+By default samples are displayed only from within the selected symbol, in isolation. In some cases you may however want to include samples from functions that were called. To do so, enable the \emph{\faSignOut*{}~Child calls} option, which may also be temporarily toggled by pressing the \keys{Z} key. Make sure to familiarize yourself with section~\ref{readingcallstacks} to be able to properly read the results.
+
 Instruction timings can be viewed as a group. To begin constructing such group, click the \LMB{}~left mouse button on the percentage value. Additional instructions can be added using the \keys{\ctrl}~key, while holding the \keys{\shift}~key will allow selection of a range. To cancel the selection, click the \RMB{}~right mouse button on a percentage value. Group statistics can be seen at the bottom of the pane.
 
 Clicking the \MMB{}~middle mouse button on the percentage value of an assembly instruction will display entry call stacks of the selected sample (see chapter~\ref{sampleparents}). This functionality is only available for instructions that have collected sampling data, and only in the assembly view, as the source code may be inlined multiple times, which would result in ambiguous location data. Note that number of entry call stacks is displayed in a tooltip, for a quick reference.
@@ -3369,11 +3392,26 @@ Tracy can import data generated by other profilers. This external data cannot be
 \begin{bclogo}[
 noborder=true,
 couleur=black!5,
+logo=\bclampe
+]{Compressed traces}
+Tracy can import traces compressed with the Zstandard algorithm (for example, using the \texttt{zstd} command-line utility). Traces ending with \texttt{.zst} extension are assumed to be compressed.
+\end{bclogo}
+
+\begin{bclogo}[
+noborder=true,
+couleur=black!5,
+logo=\bclampe
+]{Source locations}
+Chrome tracing format doesn't document a way to provide source location data. The \texttt{import-chrome} utility will however recognize a custom \texttt{loc} tag in the root of zone begin events. You should be formatting this data in the usual \texttt{filename:line} style, for example: \texttt{hello.c:42}. Providing the line number (including a colon) is optional, but highly recommended.
+\end{bclogo}
+
+\begin{bclogo}[
+noborder=true,
+couleur=black!5,
 logo=\bcattention
 ]{Limitations}
 \begin{itemize}
-\item Tracy is a single-process profiler. There is no differentiation between data coming from different pids.
-\item Tracy uses thread identifiers assigned by the operating system. This means that no two concurrent threads can have the same tid. Be aware that some external data formats may encourage usage of duplicated thread identifiers.
+\item Tracy is a single-process profiler. Should the imported trace contain PID entries, each PID+TID pair will create a new \emph{pseudo-TID} number, which will be then decoded into a PID+TID pair in thread labels. If you want to preserve the original TID numbers, your traces should omit PID entries.
 \item The imported data may be severely limited, either by not mapping directly to the data structures used by Tracy, or by following undocumented practices.
 \end{itemize}
 \end{bclogo}
