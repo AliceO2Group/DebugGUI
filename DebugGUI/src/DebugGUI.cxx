@@ -97,8 +97,10 @@ void getFrameJSON(void *data, std::ostream& json_data)
   json_data << "]";
 }
 
-bool pollGUI_gl_init(GLFWwindow* window)
+bool pollGUI_gl_init(void* context)
 {
+  GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
+
   if (glfwWindowShouldClose(window)) {
     return false;
   }
@@ -128,8 +130,10 @@ void *pollGUI_render(std::function<void(void)> guiCallback)
   return ImGui::GetDrawData();
 }
 
-void pollGUI_gl_end(GLFWwindow* window, void *draw_data)
+void pollGUI_gl_end(void* context, void *draw_data)
 {
+  GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
+
   ImGui_ImplGlfwGL3_RenderDrawLists((ImDrawData*)draw_data);
   glfwSwapBuffers(window);
 }
@@ -137,13 +141,11 @@ void pollGUI_gl_end(GLFWwindow* window, void *draw_data)
 /// @return true if we do not need to exit, false if we do.
 bool pollGUI(void* context, std::function<void(void)> guiCallback)
 {
-  GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
-
-  if (!pollGUI_gl_init(window)) {
+  if (!pollGUI_gl_init(context)) {
     return false;
   }
   auto draw_data = pollGUI_render(guiCallback);
-  pollGUI_gl_end(window, draw_data);
+  pollGUI_gl_end(context, draw_data);
   
   return true;
 }
