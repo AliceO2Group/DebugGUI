@@ -114,7 +114,8 @@ bool pollGUI_gl_init(GLFWwindow* window)
   return true;
 }
 
-ImDrawData *pollGUI_render(std::function<void(void)> guiCallback)
+/// @return draw data as void* to avoid dependencies
+void *pollGUI_render(std::function<void(void)> guiCallback)
 {
   // This is where the magic actually happens...
   if (guiCallback) {
@@ -125,9 +126,9 @@ ImDrawData *pollGUI_render(std::function<void(void)> guiCallback)
   return ImGui::GetDrawData();
 }
 
-void pollGUI_gl_end(GLFWwindow* window, ImDrawData *draw_data)
+void pollGUI_gl_end(GLFWwindow* window, void *draw_data)
 {
-  ImGui_ImplGlfwGL3_RenderDrawLists(draw_data);
+  ImGui_ImplGlfwGL3_RenderDrawLists((ImDrawData*)draw_data);
   glfwSwapBuffers(window);
 }
 
