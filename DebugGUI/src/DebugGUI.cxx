@@ -9,9 +9,7 @@
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include <functional>
-#include <iostream>
-#include <sstream>
-#include <fstream>
+#include <ostream>
 
 static void default_error_callback(int error, const char* description)
 {
@@ -54,15 +52,14 @@ void* initGUI(const char* name, void(*error_callback)(int, char const*descriptio
   io.Fonts->AddFontFromMemoryTTF((void*)s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf), 12.0f, &icons_config, icons_ranges);
 
   ImPlot::CreateContext();
-
   return window;
 }
 
-// returns a string containing drawing data in JSON format
-// the returned JSON is composed of a list of draw commands
-std::string getFrameJSON(ImDrawData *draw_data) {
-  std::ostringstream json_data;
-
+// fills a stream with drawing data in JSON format
+// the JSON is composed of a list of draw commands
+/// FIXME: document the actual schema of the format.
+void getFrameJSON(ImDrawData *draw_data, std::ostream& json_data)
+{
   json_data << "[";
 
   for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
@@ -71,7 +68,6 @@ std::string getFrameJSON(ImDrawData *draw_data) {
     const auto idx_buffer = cmd_list->IdxBuffer;
     const auto cmd_buffer = cmd_list->CmdBuffer;
 
-  
     json_data << "{\"vtx\":[";
     for (int i = 0; i < vtx_buffer.size(); ++i) {
       auto v = vtx_buffer[i];
@@ -97,35 +93,6 @@ std::string getFrameJSON(ImDrawData *draw_data) {
   }
 
   json_data << "]";
-
-  return json_data.str();
-}
-
-// records a video to a stream as a list of JSON frames
-bool recordVideoCallback(ImDrawData *draw_data, std::ostream& stream) {
-  const int framerate = 10;
-  const int max_frames = 20;
-  static bool first = true;
-  static int curr_frame = 0;
-  if (curr_frame % framerate == 0 && draw_data->CmdListsCount > 0 && curr_frame/framerate <= max_frames) {
-    if (first) {
-      stream << "[";
-    }
-    first = false;
-
-    stream << getFrameJSON(draw_data);
-
-    if (curr_frame/framerate < max_frames) {
-      stream << ",\n";
-    } else {
-      stream << "]" << std::endl;
-      std::cout << "Video recorded!" << std::endl;
-      curr_frame++;
-      return true;
-    }
-  }
-  curr_frame++;
-  return false;
 }
 
 /// @return true if we do not need to exit, false if we do.
