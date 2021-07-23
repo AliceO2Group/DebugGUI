@@ -58,8 +58,10 @@ void* initGUI(const char* name, void(*error_callback)(int, char const*descriptio
 // fills a stream with drawing data in JSON format
 // the JSON is composed of a list of draw commands
 /// FIXME: document the actual schema of the format.
-void getFrameJSON(ImDrawData *draw_data, std::ostream& json_data)
+void getFrameJSON(void *data, std::ostream& json_data)
 {
+  auto draw_data = (ImDrawData*)data;
+
   json_data << "[";
 
   for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
