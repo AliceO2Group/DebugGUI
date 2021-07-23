@@ -95,16 +95,13 @@ void getFrameJSON(ImDrawData *draw_data, std::ostream& json_data)
   json_data << "]";
 }
 
-/// @return true if we do not need to exit, false if we do.
-bool pollGUI(void* context, std::function<void(void)> guiCallback)
+bool pollGUI_gl_init(GLFWwindow* window)
 {
-  GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
   if (glfwWindowShouldClose(window)) {
     return false;
   }
   glfwPollEvents();
   ImGui_ImplGlfwGL3_NewFrame();
-
 
   // Rendering
   int display_w, display_h;
@@ -113,14 +110,38 @@ bool pollGUI(void* context, std::function<void(void)> guiCallback)
   ImVec4 clear_color = ImColor(114, 144, 154);
   glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
   glClear(GL_COLOR_BUFFER_BIT);
+
+  return true;
+}
+
+ImDrawData *pollGUI_render(std::function<void(void)> guiCallback)
+{
   // This is where the magic actually happens...
   if (guiCallback) {
     guiCallback();
   }
   ImGui::Render();
-  auto draw_data = ImGui::GetDrawData();
+
+  return ImGui::GetDrawData();
+}
+
+void pollGUI_gl_end(GLFWwindow* window, ImDrawData *draw_data)
+{
   ImGui_ImplGlfwGL3_RenderDrawLists(draw_data);
   glfwSwapBuffers(window);
+}
+
+/// @return true if we do not need to exit, false if we do.
+bool pollGUI(void* context, std::function<void(void)> guiCallback)
+{
+  GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
+
+  if (!pollGUI_gl_init(window)) {
+    return false;
+  }
+  auto draw_data = pollGUI_render(guiCallback);
+  pollGUI_gl_end(window, draw_data);
+  
   return true;
 }
 
