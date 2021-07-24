@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <functional>
 #include <ostream>
+#include <iostream>
+#include <sstream>
 
 static void default_error_callback(int error, const char* description)
 {
@@ -60,7 +62,7 @@ void* initGUI(const char* name, void(*error_callback)(int, char const*descriptio
 /// FIXME: document the actual schema of the format.
 void getFrameJSON(void *data, std::ostream& json_data)
 {
-  auto draw_data = (ImDrawData*)data;
+  ImDrawData* draw_data = (ImDrawData*)data;
 
   json_data << "[";
 
@@ -110,10 +112,10 @@ struct cmdContainer {
 
 void getFrameRaw(void *data, void **raw_data, int *size)
 {
-  auto draw_data = (ImDrawData*)data;
+  ImDrawData* draw_data = (ImDrawData*)data;
 
   // compute sizes
-  int buffer_size = 0,
+  int buffer_size = sizeof(int)*3,
       vtx_count = 0,
       idx_count = 0,
       cmd_count = 0;
@@ -151,14 +153,17 @@ void getFrameRaw(void *data, void **raw_data, int *size)
     }
   }
 
+  int idx_offset = 0;
   short* data_idx_ptr = (short*) data_vtx_ptr;
   for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
     const auto cmd_list = draw_data->CmdLists[cmd_id];
 
     for (auto const& idx : cmd_list->IdxBuffer) {
-      *data_idx_ptr = idx;
+      *data_idx_ptr = idx + (short)idx_offset;
       data_idx_ptr++;
     }
+
+    idx_offset += cmd_list->VtxBuffer.size();
   }
 
   cmdContainer* data_cmd_ptr = (cmdContainer*) data_idx_ptr;
@@ -226,7 +231,7 @@ bool pollGUI(void* context, std::function<void(void)> guiCallback)
   if (!pollGUIPreRender(context)) {
     return false;
   }
-  auto draw_data = pollGUIRender(guiCallback);
+  void *draw_data = pollGUIRender(guiCallback);
   pollGUIPostRender(context, draw_data);
   
   return true;

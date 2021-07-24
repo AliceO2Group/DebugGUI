@@ -12,6 +12,17 @@
         <input type="text" id="port"><button id="button" onclick="launch()">LAUNCH</button>
 		<script src="three.min.js"></script>
 		<script>
+            function dataToStream(data) {
+                this.buffer = new DataView(data);
+                this.i = 0;
+                this.getInt = () => { const d = this.buffer.getInt32(this.i, true); this.i+=4; return d };
+                this.getFloat = () => { const d = this.buffer.getFloat32(this.i, true); this.i+=4; return d };
+                this.getShort = () => { const d = this.buffer.getInt16(this.i, true); this.i+=2; return d };
+
+                return this;
+            }
+
+
             function launch() {
                 let input_port = document.getElementById("port");
                 let input_ip = document.getElementById("ip");
@@ -27,6 +38,7 @@
             function main(ip, port) {
                 new THREE.TextureLoader().load( "texture.png", ( map ) => {
                     let ws = new WebSocket("ws://" + ip + ":" + port, "dpl");
+                    ws.binaryType = "arraybuffer";
 
                     let guniforms = {
                         tTex: { type: 't', value: null },
@@ -137,6 +149,47 @@
                         return all_cmds;
                     }
 
+                    function updateBuffersRaw(data) {
+                        data = dataToStream(data);
+                        let all_cmds = []
+                        
+                        let vtx_length = data.getInt();
+                        let idx_length = data.getInt();
+                        let cmd_length = data.getInt();
+
+                        let idx = 0;
+                        for (let i = 0; i < vtx_length; ++i) {
+                            posArr[i*3] = data.getFloat();
+                            posArr[i*3+1] = data.getFloat();
+                            posArr[i*3+2] = 0;
+                            uvArray[i*2] = data.getFloat();
+                            uvArray[i*2+1] = 1-data.getFloat();
+                            const raw_color = data.getInt();
+                            colorArr[i*3] = (raw_color & 255)/255;
+                            colorArr[i*3+1] = (raw_color>>8 & 255)/255;
+                            colorArr[i*3+2] = (raw_color>>16 & 255)/255;
+                            alphaArr[i] = (raw_color>>24 & 255)/255;
+                        }
+                        for (let i = 0; i < idx_length; ++i) {
+                            indexArray[i] = data.getShort();
+                        }
+
+                        for (let i = 0; i < cmd_length; ++i) {
+                            all_cmds.push({
+                                cnt: data.getInt(),
+                                clp: [data.getFloat(), data.getFloat(), data.getFloat(), data.getFloat()]
+                            });
+                        }
+
+                        geometry.attributes.position.needsUpdate = true;
+                        geometry.attributes.uv.needsUpdate = true;
+                        geometry.attributes.color.needsUpdate = true;
+                        geometry.attributes.alpha.needsUpdate = true;
+                        geometry.index.needsUpdate = true;
+
+                        return all_cmds;
+                    }
+
 
                     map.needsUpdate = true;
                     map.minFilter = map.magFilter = THREE.NearestFilter;
@@ -149,8 +202,8 @@
                     renderer.setScissorTest(true);
 
                     ws.onmessage = e => {
-                        const drawData = JSON.parse(e.data);
-                        const all_cmds = updateBuffers(drawData);
+                        //const drawData = JSON.parse(e.data);
+                        const all_cmds = updateBuffersRaw(e.data);
                         let curr_base = 0;
                         renderer.clear();
                         for (const cmd of all_cmds) {

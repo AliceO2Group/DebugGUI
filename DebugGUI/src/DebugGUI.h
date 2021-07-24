@@ -21,6 +21,7 @@ void default_error_callback(int, const char*);
 void* initGUI(const char* name, decltype(default_error_callback) = nullptr);
 bool pollGUI(void* context, std::function<void(void)> guiCallback);
 void getFrameJSON(void *data, std::ostream& json_data);
+void getFrameRaw(void *data, void **raw_data, int *size);
 bool pollGUIPreRender(void* context);
 void* pollGUIRender(std::function<void(void)> guiCallback);
 void pollGUIPostRender(void* context, void* draw_data);
