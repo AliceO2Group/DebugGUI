@@ -97,6 +97,88 @@ void getFrameJSON(void *data, std::ostream& json_data)
   json_data << "]";
 }
 
+
+struct vtxContainer {
+  float posX, posY, uvX, uvY;
+  int col;
+};
+
+struct cmdContainer {
+  int count;
+  float rectX, rectY, rectZ, rectW;
+};
+
+void getFrameRaw(void *data, void **raw_data, int *size)
+{
+  auto draw_data = (ImDrawData*)data;
+
+  // compute sizes
+  int buffer_size = 0,
+      vtx_count = 0,
+      idx_count = 0,
+      cmd_count = 0;
+  for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
+    const auto cmd_list = draw_data->CmdLists[cmd_id];
+
+    vtx_count += cmd_list->VtxBuffer.size();
+    buffer_size += cmd_list->VtxBuffer.size() * (sizeof(vtxContainer));
+
+    idx_count += cmd_list->IdxBuffer.size();
+    buffer_size += cmd_list->IdxBuffer.size() * (sizeof(short));
+
+    cmd_count += cmd_list->CmdBuffer.size();
+    buffer_size += cmd_list->CmdBuffer.size() * (sizeof(cmdContainer));
+  }
+
+  void *local_data_base = malloc(buffer_size);
+
+  int *data_header_ptr = (int*) local_data_base;
+  *data_header_ptr = vtx_count; data_header_ptr++;
+  *data_header_ptr = idx_count; data_header_ptr++;
+  *data_header_ptr = cmd_count; data_header_ptr++;
+
+  vtxContainer* data_vtx_ptr = (vtxContainer*) data_header_ptr;
+  for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
+    const auto cmd_list = draw_data->CmdLists[cmd_id];
+
+    for (auto const& vtx : cmd_list->VtxBuffer) {
+      data_vtx_ptr->posX = vtx.pos.x;
+      data_vtx_ptr->posY = vtx.pos.y;
+      data_vtx_ptr->uvX = vtx.uv.x;
+      data_vtx_ptr->uvY = vtx.uv.y;
+      data_vtx_ptr->col = vtx.col;
+      data_vtx_ptr++;
+    }
+  }
+
+  short* data_idx_ptr = (short*) data_vtx_ptr;
+  for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
+    const auto cmd_list = draw_data->CmdLists[cmd_id];
+
+    for (auto const& idx : cmd_list->IdxBuffer) {
+      *data_idx_ptr = idx;
+      data_idx_ptr++;
+    }
+  }
+
+  cmdContainer* data_cmd_ptr = (cmdContainer*) data_idx_ptr;
+  for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
+    const auto cmd_list = draw_data->CmdLists[cmd_id];
+
+    for (auto const& cmd : cmd_list->CmdBuffer) {
+      data_cmd_ptr->count = cmd.ElemCount;
+      data_cmd_ptr->rectX = cmd.ClipRect.x;
+      data_cmd_ptr->rectY = cmd.ClipRect.y;
+      data_cmd_ptr->rectZ = cmd.ClipRect.z;
+      data_cmd_ptr->rectW = cmd.ClipRect.w;
+      data_cmd_ptr++;
+    }
+  }
+
+  *size = buffer_size;
+  *raw_data = local_data_base;
+}
+
 bool pollGUIPreRender(void* context)
 {
   GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
