@@ -97,7 +97,7 @@ void getFrameJSON(void *data, std::ostream& json_data)
   json_data << "]";
 }
 
-bool pollGUI_gl_init(void* context)
+bool pollGUIPreRender(void* context)
 {
   GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
 
@@ -119,7 +119,7 @@ bool pollGUI_gl_init(void* context)
 }
 
 /// @return draw data as void* to avoid dependencies
-void *pollGUI_render(std::function<void(void)> guiCallback)
+void *pollGUIRender(std::function<void(void)> guiCallback)
 {
   // This is where the magic actually happens...
   if (guiCallback) {
@@ -130,7 +130,7 @@ void *pollGUI_render(std::function<void(void)> guiCallback)
   return ImGui::GetDrawData();
 }
 
-void pollGUI_gl_end(void* context, void *draw_data)
+void pollGUIPostRender(void* context, void *draw_data)
 {
   GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
 
@@ -141,11 +141,11 @@ void pollGUI_gl_end(void* context, void *draw_data)
 /// @return true if we do not need to exit, false if we do.
 bool pollGUI(void* context, std::function<void(void)> guiCallback)
 {
-  if (!pollGUI_gl_init(context)) {
+  if (!pollGUIPreRender(context)) {
     return false;
   }
-  auto draw_data = pollGUI_render(guiCallback);
-  pollGUI_gl_end(context, draw_data);
+  auto draw_data = pollGUIRender(guiCallback);
+  pollGUIPostRender(context, draw_data);
   
   return true;
 }

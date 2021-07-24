@@ -12,7 +12,6 @@
         <input type="text" id="port"><button id="button" onclick="launch()">LAUNCH</button>
 		<script src="three.min.js"></script>
 		<script>
-
             function launch() {
                 let input_port = document.getElementById("port");
                 let input_ip = document.getElementById("ip");
@@ -27,13 +26,13 @@
 
             function main(ip, port) {
                 new THREE.TextureLoader().load( "texture.png", ( map ) => {
-                    var ws = new WebSocket("ws://" + ip + ":" + port, "dpl");
+                    let ws = new WebSocket("ws://" + ip + ":" + port, "dpl");
 
-                    var guniforms = {
+                    let guniforms = {
                         tTex: { type: 't', value: null },
                     };
 
-                    var ImVS = [
+                    let ImVS = [
                         "attribute float alpha;",
 
                         "varying vec3 vColor;",
@@ -41,15 +40,13 @@
                         "varying float vAlpha;",
 
                         "void main() {",
-
                             "vColor = color;",
                             "vUv = uv;",
                             "vAlpha = alpha;",
-                            "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+                            "gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);",
+                        "}"].join("\n");
 
-                        "}" ].join("\n");
-
-                    var ImFS = [
+                    let ImFS = [
                         "varying vec3 vColor;",
                         "varying vec2 vUv;",
                         "varying float vAlpha;",
@@ -57,31 +54,31 @@
                         "uniform sampler2D tTex;",
 
                         "void main() {",
-                                "gl_FragColor = vec4( vColor, texture2D( tTex, vUv ).a * vAlpha );",
+                            "gl_FragColor = vec4( vColor, texture2D(tTex, vUv).a * vAlpha);",
                         "}" ].join("\n");
 
-                    var material = new THREE.ShaderMaterial( {
+                    let material = new THREE.ShaderMaterial({
                         uniforms: guniforms,
                         vertexShader: ImVS,
                         fragmentShader: ImFS,
                         vertexColors: THREE.VertexColors,
                         transparent: true,
-                        side: THREE.DoubleSide } );
+                        side: THREE.DoubleSide
+                    });
 
-                    
-                    let scene = new THREE.Scene();
+                    const scene = new THREE.Scene();
                     let camera = new THREE.OrthographicCamera(0, window.innerWidth, 0, window.innerHeight, -1, 1);
                     camera.position.z = 1;
 
-                    window.addEventListener('resize', resize_callback, false);
+                    window.addEventListener('resize', resizeCallback, false);
 
-                    function resize_callback() {
-                        renderer.setSize(window.innerWidth, window.innerHeight);
-                        camera = new THREE.OrthographicCamera(0, width, 0, height, -1, 1);
+                    function resizeCallback() {
+                        camera = new THREE.OrthographicCamera(0, window.innerWidth, 0, window.innerHeight, -1, 1);
                         camera.position.z = 1;
+                        renderer.setSize(window.innerWidth, window.innerHeight);
                     }
 
-                    var MAX_VERTICES = 65535;
+                    const MAX_VERTICES = 65535;
 
                     geometry = new THREE.BufferGeometry();
                     geometry.setIndex( new THREE.BufferAttribute( new Uint16Array ( MAX_VERTICES ), 1) );
@@ -92,9 +89,9 @@
                     geometry.dynamic = true;
                     geometry.offsets = [{start: 0, index: 0, count: 0}];
 
-                    var mesh = new THREE.Mesh( geometry, material );
+                    const mesh = new THREE.Mesh(geometry, material);
                     mesh.frustumCulled = false;
-                    scene.add( mesh );
+                    scene.add(mesh);
 
                     const posArr = geometry.attributes.position.array;
                     const colorArr = geometry.attributes.color.array;
@@ -131,7 +128,6 @@
                             vtx_length += cmd.vtx.length;
                         }
     
-    
                         geometry.attributes.position.needsUpdate = true;
                         geometry.attributes.uv.needsUpdate = true;
                         geometry.attributes.color.needsUpdate = true;
@@ -148,42 +144,19 @@
 
                     const renderer = new THREE.WebGLRenderer();
                     renderer.autoClear = false;
-                    renderer.setSize( window.innerWidth, window.innerHeight );
-                    document.body.appendChild( renderer.domElement );
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    document.body.appendChild(renderer.domElement);
                     renderer.setScissorTest(true);
 
-                    var frame_counter = 0;
-                    var picture_counter = 0;
-
-
-                    /*const animate = function () {
-                        requestAnimationFrame(animate);
-                        if (frame_counter % 10 == 0) {
-                            all_cmds = updateBuffers(data[picture_counter]);
-                            let curr_base = 0;
-                            renderer.clear();
-                            for (const cmd of all_cmds) {
-                                renderer.setScissor(cmd.clp[0], window.innerHeight - cmd.clp[3], cmd.clp[2] - cmd.clp[0], cmd.clp[3] - cmd.clp[1]);
-                                geometry.setDrawRange(curr_base, cmd.cnt);
-                                renderer.render( scene, camera );
-                                curr_base += cmd.cnt;
-                            }
-                            picture_counter = (picture_counter+1) % data.length;
-                        }
-                        frame_counter++;
-                    }
-
-                    animate();*/
-
                     ws.onmessage = e => {
-                        let drawData = JSON.parse(e.data);
-                        let all_cmds = updateBuffers(drawData);
+                        const drawData = JSON.parse(e.data);
+                        const all_cmds = updateBuffers(drawData);
                         let curr_base = 0;
                         renderer.clear();
                         for (const cmd of all_cmds) {
                             renderer.setScissor(cmd.clp[0], window.innerHeight - cmd.clp[3], cmd.clp[2] - cmd.clp[0], cmd.clp[3] - cmd.clp[1]);
                             geometry.setDrawRange(curr_base, cmd.cnt);
-                            renderer.render( scene, camera );
+                            renderer.render(scene, camera);
                             curr_base += cmd.cnt;
                         }
                     }
