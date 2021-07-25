@@ -10,8 +10,6 @@
 #include <cstdio>
 #include <functional>
 #include <ostream>
-#include <iostream>
-#include <sstream>
 
 static void default_error_callback(int error, const char* description)
 {
@@ -110,6 +108,10 @@ struct cmdContainer {
   float rectX, rectY, rectZ, rectW;
 };
 
+// given draw data, returns a mallocd buffer containing formatted frame data
+// ready to be sent and its size.
+// the returned buffer must be freed by the caller.
+/// FIXME: document actual schema of the format
 void getFrameRaw(void *data, void **raw_data, int *size)
 {
   ImDrawData* draw_data = (ImDrawData*)data;
