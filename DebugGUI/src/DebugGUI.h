@@ -11,7 +11,7 @@
 #define FRAMEWORK_DEBUGGUI_H
 
 #include <functional>
-#include <ostream>
+#include <iosfwd>
 
 namespace o2::framework {
 
