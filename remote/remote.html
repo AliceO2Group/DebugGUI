@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Remote DebugGUI</title>
+		<style>
+			body { margin: 0; background: grey; }
+		</style>
+	</head>
+	<body>
+        <input type="text" id="ip" value="localhost">
+        <input type="text" id="port"><button id="button" onclick="launch()">LAUNCH</button>
+		<script src="three.min.js"></script>
+		<script>
+            function dataToStream(data) {
+                this.buffer = new DataView(data);
+                this.i = 0;
+                this.getInt = () => { const d = this.buffer.getInt32(this.i, true); this.i+=4; return d };
+                this.getFloat = () => { const d = this.buffer.getFloat32(this.i, true); this.i+=4; return d };
+                this.getShort = () => { const d = this.buffer.getInt16(this.i, true); this.i+=2; return d };
+
+                return this;
+            }
+
+
+            function launch() {
+                let input_port = document.getElementById("port");
+                let input_ip = document.getElementById("ip");
+                let button = document.getElementById("button");
+                let port = input_port.value;
+                let ip = input_ip.value;
+                input_port.remove();
+                input_ip.remove();
+                button.remove();
+                main(ip, port);
+            }
+
+            function main(ip, port) {
+                new THREE.TextureLoader().load( "texture.png", ( map ) => {
+                    let ws = new WebSocket("ws://" + ip + ":" + port, "dpl");
+                    ws.binaryType = "arraybuffer";
+
+                    let guniforms = {
+                        tTex: { type: 't', value: null },
+                    };
+
+                    let ImVS = [
+                        "attribute float alpha;",
+
+                        "varying vec3 vColor;",
+                        "varying vec2 vUv;",
+                        "varying float vAlpha;",
+
+                        "void main() {",
+                            "vColor = color;",
+                            "vUv = uv;",
+                            "vAlpha = alpha;",
+                            "gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);",
+                        "}"].join("\n");
+
+                    let ImFS = [
+                        "varying vec3 vColor;",
+                        "varying vec2 vUv;",
+                        "varying float vAlpha;",
+                        
+                        "uniform sampler2D tTex;",
+
+                        "void main() {",
+                            "gl_FragColor = vec4( vColor, texture2D(tTex, vUv).a * vAlpha);",
+                        "}" ].join("\n");
+
+                    let material = new THREE.ShaderMaterial({
+                        uniforms: guniforms,
+                        vertexShader: ImVS,
+                        fragmentShader: ImFS,
+                        vertexColors: THREE.VertexColors,
+                        transparent: true,
+                        side: THREE.DoubleSide
+                    });
+
+                    const scene = new THREE.Scene();
+                    let camera = new THREE.OrthographicCamera(0, window.innerWidth, 0, window.innerHeight, -1, 1);
+                    camera.position.z = 1;
+
+                    window.addEventListener('resize', resizeCallback, false);
+
+                    function resizeCallback() {
+                        camera = new THREE.OrthographicCamera(0, window.innerWidth, 0, window.innerHeight, -1, 1);
+                        camera.position.z = 1;
+                        renderer.setSize(window.innerWidth, window.innerHeight);
+                    }
+
+                    const MAX_VERTICES = 65535;
+
+                    geometry = new THREE.BufferGeometry();
+                    geometry.setIndex( new THREE.BufferAttribute( new Uint16Array ( MAX_VERTICES ), 1) );
+                    geometry.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array( MAX_VERTICES * 3 ), 3 ) );
+                    geometry.setAttribute( 'uv',       new THREE.BufferAttribute( new Float32Array( MAX_VERTICES * 2 ), 2 ) );
+                    geometry.setAttribute( 'color',    new THREE.BufferAttribute( new Float32Array( MAX_VERTICES * 3 ), 3 ) );
+                    geometry.setAttribute( 'alpha',    new THREE.BufferAttribute( new Float32Array( MAX_VERTICES     ), 1 ) );
+                    geometry.dynamic = true;
+                    geometry.offsets = [{start: 0, index: 0, count: 0}];
+
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.frustumCulled = false;
+                    scene.add(mesh);
+
+                    const posArr = geometry.attributes.position.array;
+                    const colorArr = geometry.attributes.color.array;
+                    const alphaArr = geometry.attributes.alpha.array;
+                    const uvArray = geometry.attributes.uv.array;
+                    const indexArray = geometry.index.array;
+
+                    function updateBuffers(data) {
+                        let idx = 0;
+                        let index_idx = 0;
+                        let index_length = 0;
+                        let vtx_length = 0;
+                        let all_cmds = []
+                        for (const cmd of data) {
+                            all_cmds.push(...cmd.cmd);
+                            for (let i = 0; i < cmd.vtx.length; ++i) {
+                                const raw_color = cmd.vtx[i][2];
+                                posArr[idx*3] = cmd.vtx[i][0];
+                                posArr[idx*3+1] = cmd.vtx[i][1];
+                                posArr[idx*3+2] = 0;
+                                colorArr[idx*3] = (raw_color & 255)/255;
+                                colorArr[idx*3+1] = (raw_color>>8 & 255)/255;
+                                colorArr[idx*3+2] = (raw_color>>16 & 255)/255;
+                                alphaArr[idx] = (raw_color>>24 & 255)/255;
+                                uvArray[idx*2] = cmd.vtx[i][3];
+                                uvArray[idx*2+1] = 1-cmd.vtx[i][4];
+                                idx++;
+                            }
+                            for (let i = 0; i < cmd.idx.length; ++i) {
+                                indexArray[index_idx] = cmd.idx[i] + vtx_length;
+                                index_idx++;
+                            }
+                            index_length += cmd.idx.length;
+                            vtx_length += cmd.vtx.length;
+                        }
+    
+                        geometry.attributes.position.needsUpdate = true;
+                        geometry.attributes.uv.needsUpdate = true;
+                        geometry.attributes.color.needsUpdate = true;
+                        geometry.attributes.alpha.needsUpdate = true;
+                        geometry.index.needsUpdate = true;
+
+                        return all_cmds;
+                    }
+
+                    function updateBuffersRaw(data) {
+                        data = dataToStream(data);
+                        let all_cmds = []
+                        
+                        let vtx_length = data.getInt();
+                        let idx_length = data.getInt();
+                        let cmd_length = data.getInt();
+
+                        let idx = 0;
+                        for (let i = 0; i < vtx_length; ++i) {
+                            posArr[i*3] = data.getFloat();
+                            posArr[i*3+1] = data.getFloat();
+                            posArr[i*3+2] = 0;
+                            uvArray[i*2] = data.getFloat();
+                            uvArray[i*2+1] = 1-data.getFloat();
+                            const raw_color = data.getInt();
+                            colorArr[i*3] = (raw_color & 255)/255;
+                            colorArr[i*3+1] = (raw_color>>8 & 255)/255;
+                            colorArr[i*3+2] = (raw_color>>16 & 255)/255;
+                            alphaArr[i] = (raw_color>>24 & 255)/255;
+                        }
+                        for (let i = 0; i < idx_length; ++i) {
+                            indexArray[i] = data.getShort();
+                        }
+
+                        for (let i = 0; i < cmd_length; ++i) {
+                            all_cmds.push({
+                                cnt: data.getInt(),
+                                clp: [data.getFloat(), data.getFloat(), data.getFloat(), data.getFloat()]
+                            });
+                        }
+
+                        geometry.attributes.position.needsUpdate = true;
+                        geometry.attributes.uv.needsUpdate = true;
+                        geometry.attributes.color.needsUpdate = true;
+                        geometry.attributes.alpha.needsUpdate = true;
+                        geometry.index.needsUpdate = true;
+
+                        return all_cmds;
+                    }
+
+
+                    map.needsUpdate = true;
+                    map.minFilter = map.magFilter = THREE.NearestFilter;
+                    guniforms.tTex.value = map;
+
+                    const renderer = new THREE.WebGLRenderer();
+                    renderer.autoClear = false;
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    document.body.appendChild(renderer.domElement);
+                    renderer.setScissorTest(true);
+
+                    ws.onmessage = e => {
+                        //const drawData = JSON.parse(e.data);
+                        const all_cmds = updateBuffersRaw(e.data);
+                        let curr_base = 0;
+                        renderer.clear();
+                        for (const cmd of all_cmds) {
+                            renderer.setScissor(cmd.clp[0], window.innerHeight - cmd.clp[3], cmd.clp[2] - cmd.clp[0], cmd.clp[3] - cmd.clp[1]);
+                            geometry.setDrawRange(curr_base, cmd.cnt);
+                            renderer.render(scene, camera);
+                            curr_base += cmd.cnt;
+                        }
+                    }
+                });
+            }
+		</script>
+	</body>
+</html>
