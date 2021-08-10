@@ -18,6 +18,12 @@
                 this.getInt = () => { const d = this.buffer.getInt32(this.i, true); this.i+=4; return d };
                 this.getFloat = () => { const d = this.buffer.getFloat32(this.i, true); this.i+=4; return d };
                 this.getShort = () => { const d = this.buffer.getInt16(this.i, true); this.i+=2; return d };
+                this.getChar = () => { const d = this.buffer.getInt8(this.i); this.i++; return d };
+
+                this.setInt = (val) => { this.buffer.setInt32(this.i, val, true); this.i+=4 };
+                this.setFloat = (val) => { this.buffer.setFloat32(this.i, val, true); this.i+=4 };
+                this.setShort = (val) => { this.buffer.setInt16(this.i, val, true); this.i+=2 };
+                this.setChar = (val) => { this.buffer.setInt8(this.i, val); this.i++ };
 
                 return this;
             }
@@ -212,6 +218,31 @@
                             renderer.render(scene, camera);
                             curr_base += cmd.cnt;
                         }
+                    }
+
+                    renderer.domElement.onmousemove = e => {
+                        let buffer = new ArrayBuffer(9);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(1);
+                        stream.setFloat(e.offsetX);
+                        stream.setFloat(e.offsetY);
+                        ws.send(buffer);
+                    }
+
+                    renderer.domElement.onmousedown = e => {
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(2);
+                        stream.setChar(1);
+                        ws.send(buffer);
+                    }
+
+                    renderer.domElement.onmouseup = e => {
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(2);
+                        stream.setChar(0);
+                        ws.send(buffer);
                     }
                 });
             }

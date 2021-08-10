@@ -226,7 +226,7 @@ void pollGUIPostRender(void* context, void *draw_data)
   ImGui_ImplGlfwGL3_RenderDrawLists((ImDrawData*)draw_data);
   glfwSwapBuffers(window);
 }
-
+  
 /// @return true if we do not need to exit, false if we do.
 bool pollGUI(void* context, std::function<void(void)> guiCallback)
 {
