@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<title>Remote DebugGUI</title>
+		<title>DebugGUI</title>
 		<style>
 			body { margin: 0; background: grey; }
 		</style>
@@ -12,6 +12,8 @@
         <input type="text" id="port"><button id="button" onclick="launch()">LAUNCH</button>
 		<script src="three.min.js"></script>
 		<script>
+            let interactive = false;
+
             function dataToStream(data) {
                 this.buffer = new DataView(data);
                 this.i = 0;
@@ -208,7 +210,6 @@
                     renderer.setScissorTest(true);
 
                     ws.onmessage = e => {
-                        //const drawData = JSON.parse(e.data);
                         const all_cmds = updateBuffersRaw(e.data);
                         let curr_base = 0;
                         renderer.clear();
@@ -221,6 +222,7 @@
                     }
 
                     renderer.domElement.onmousemove = e => {
+                        if (!interactive) return;
                         let buffer = new ArrayBuffer(9);
                         let stream = dataToStream(buffer);
                         stream.setChar(1);
@@ -230,6 +232,7 @@
                     }
 
                     renderer.domElement.onmousedown = e => {
+                        if (!interactive) return;
                         let buffer = new ArrayBuffer(2);
                         let stream = dataToStream(buffer);
                         stream.setChar(2);
@@ -238,11 +241,47 @@
                     }
 
                     renderer.domElement.onmouseup = e => {
+                        if (!interactive) return;
                         let buffer = new ArrayBuffer(2);
                         let stream = dataToStream(buffer);
                         stream.setChar(2);
                         stream.setChar(0);
                         ws.send(buffer);
+                    }
+
+                    renderer.domElement.onwheel = e => {
+                        if (!interactive) return;
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(3);
+                        stream.setChar(e.wheelDelta > 0 ? 1 : -1);
+                        ws.send(buffer);
+                    }
+
+                    document.onkeypress = e => {
+                        switch (e.key) {
+                            case 'i':
+                            {
+                                interactive = !interactive;
+                                if (interactive) {
+                                    document.title = "DebugGUI [INTERACTIVE]";
+                                } else {
+                                    document.title = "DebugGUI";
+                                }
+                                break;
+                            }
+                            case 'f':
+                            {
+                                if (!interactive) break;
+                                let buffer = new ArrayBuffer(9);
+                                let stream = dataToStream(buffer);
+                                stream.setChar(4);
+                                stream.setInt(window.innerWidth);
+                                stream.setInt(window.innerHeight);
+                                ws.send(buffer);
+                                break;
+                            }
+                        }
                     }
                 });
             }
