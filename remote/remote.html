@@ -165,6 +165,8 @@
                         let idx_length = data.getInt();
                         let cmd_length = data.getInt();
 
+                        console.log(vtx_length);
+
                         let idx = 0;
                         for (let i = 0; i < vtx_length; ++i) {
                             posArr[i*3] = data.getFloat();
@@ -272,12 +274,29 @@
                             }
                             case 'f':
                             {
-                                if (!interactive) break;
                                 let buffer = new ArrayBuffer(9);
                                 let stream = dataToStream(buffer);
                                 stream.setChar(4);
                                 stream.setInt(window.innerWidth);
                                 stream.setInt(window.innerHeight);
+                                ws.send(buffer);
+                                break;
+                            }
+                            case '+':
+                            {
+                                let buffer = new ArrayBuffer(2);
+                                let stream = dataToStream(buffer);
+                                stream.setChar(5);
+                                stream.setChar(1);
+                                ws.send(buffer);
+                                break;
+                            }
+                            case '-':
+                            {
+                                let buffer = new ArrayBuffer(2);
+                                let stream = dataToStream(buffer);
+                                stream.setChar(5);
+                                stream.setChar(-1);
                                 ws.send(buffer);
                                 break;
                             }

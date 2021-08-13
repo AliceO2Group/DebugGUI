@@ -24,26 +24,29 @@ namespace framework
 // @return an object of kind GLFWwindow* as void* to avoid having a direct dependency
 void* initGUI(const char* name, void(*error_callback)(int, char const*description))
 {
-  // Setup window
-  /*if (error_callback == nullptr) {
-    glfwSetErrorCallback(default_error_callback);
+  GLFWwindow* window = nullptr;
+  if (name) {
+    // Setup window
+    if (error_callback == nullptr) {
+      glfwSetErrorCallback(default_error_callback);
+    }
+    if (!glfwInit())
+      return nullptr;
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  #if __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+  #endif
+    window = glfwCreateWindow(1280, 720, name, nullptr, nullptr);
+    glfwMakeContextCurrent(window);
+    gl3wInit();
+
+    // Setup ImGui binding
+    ImGui_ImplGlfwGL3_Init(window, true);
+  } else {
+    ImGui::CreateContext();
   }
-  if (!glfwInit())
-    return nullptr;
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#if __APPLE__
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-  GLFWwindow* window = glfwCreateWindow(1280, 720, name, nullptr, nullptr);
-  glfwMakeContextCurrent(window);
-  gl3wInit();*/
-
-  // Setup ImGui binding
-
-  //ImGui_ImplGlfwGL3_Init(window, true);
-  ImGui::CreateContext();
 
   // Load Fonts
   // (there is a default font, this is only if you want to change it. see extra_fonts/README.txt for more details)
@@ -52,14 +55,15 @@ void* initGUI(const char* name, void(*error_callback)(int, char const*descriptio
   static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
   ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true; icons_config.FontDataOwnedByAtlas = false;
   io.Fonts->AddFontFromMemoryTTF((void*)s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf), 12.0f, &icons_config, icons_ranges);
-  unsigned char* pixels;
-  int width, height;
-  io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
+  
+  // this initializes the texture
+  if (io.Fonts->ConfigData.empty())
+    io.Fonts->AddFontDefault();
+  io.Fonts->Build();
+  io.DisplaySize = ImVec2(1280, 720);
+  
   ImPlot::CreateContext();
-  io.DisplaySize = ImVec2(1000, 1000);
-  //return window;
-  return nullptr;
+  return window;
 }
 
 // fills a stream with drawing data in JSON format
@@ -195,26 +199,29 @@ void getFrameRaw(void *data, void **raw_data, int *size)
 
 bool pollGUIPreRender(void* context)
 {
-  //GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
+  if (context) {
+    GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
 
-/*
-  if (glfwWindowShouldClose(window)) {
-    return false;
+    if (glfwWindowShouldClose(window)) {
+      return false;
+    }
+    glfwPollEvents();
+    ImGui_ImplGlfwGL3_NewFrame();
+
+    // Clearing the viewport
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    ImVec4 clear_color = ImColor(114, 144, 154);
+    glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+    glClear(GL_COLOR_BUFFER_BIT);
+  } else {
+    // Just initialize new frame
+    ImGuiIO& io = ImGui::GetIO();
+    io.DeltaTime = (float)(1.0f/60.0f);
+    ImGui::NewFrame();
   }
-  glfwPollEvents();*/
-  ImGuiIO& io = ImGui::GetIO();
-  
-  io.DeltaTime = (float)(1.0f/60.0f);
-  ImGui::NewFrame();
 
-  // Rendering
-  /*
-  int display_w, display_h;
-  glfwGetFramebufferSize(window, &display_w, &display_h);
-  glViewport(0, 0, display_w, display_h);
-  ImVec4 clear_color = ImColor(114, 144, 154);
-  glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
-  glClear(GL_COLOR_BUFFER_BIT);*/
 
   return true;
 }
@@ -233,10 +240,12 @@ void *pollGUIRender(std::function<void(void)> guiCallback)
 
 void pollGUIPostRender(void* context, void *draw_data)
 {
-  //GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
+  if (context) {
+    GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
 
-  //ImGui_ImplGlfwGL3_RenderDrawLists((ImDrawData*)draw_data);
-  //glfwSwapBuffers(window);
+    ImGui_ImplGlfwGL3_RenderDrawLists((ImDrawData*)draw_data);
+    glfwSwapBuffers(window);
+  }
 }
   
 /// @return true if we do not need to exit, false if we do.
@@ -255,8 +264,8 @@ void disposeGUI()
 {
   ImPlot::DestroyContext();
   // Cleanup
-  //ImGui_ImplGlfwGL3_Shutdown();
-  //glfwTerminate();
+  ImGui_ImplGlfwGL3_Shutdown();
+  glfwTerminate();
 }
 
 } // namespace framework
