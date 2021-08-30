@@ -4,7 +4,7 @@
 		<meta charset="utf-8">
 		<title>DebugGUI</title>
 		<style>
-			body { margin: 0; background: grey; }
+			body { margin: 0; background: grey; overflow: hidden; }
 		</style>
 	</head>
 	<body>
@@ -93,7 +93,8 @@
                             stream.setInt(window.innerWidth);
                             stream.setInt(window.innerHeight);
                             ws.send(buffer);
-                        }
+                        },
+                        input: "",
                     };
 
                     const gui = new dat.gui.GUI();
@@ -116,6 +117,12 @@
                         stream.setInt(settings.latency);
                         ws.send(buffer);
                     });
+
+                    gui.add(settings, "input").onChange(() => {
+                        settings.input = "";
+                        gui.__controllers[3].__input.value = "";
+                    });
+
                     
 
                     let guniforms = {
@@ -365,6 +372,36 @@
                             stream.setChar(e.key.charCodeAt(0));
                             ws.send(buffer);
                         }
+                    }
+
+                    renderer.domElement.ontouchmove = e => {
+                        if (!settings.interactive) return;
+                        e.preventDefault();
+                        let buffer = new ArrayBuffer(9);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mousepos);
+                        stream.setFloat(e.touches[0].clientX);
+                        stream.setFloat(e.touches[0].clientY);
+                        ws.send(buffer);
+                    }
+
+                    renderer.domElement.ontouchstart = e => {
+                        if (!settings.interactive) return;
+                        renderer.domElement.ontouchmove(e);
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mouseclick);
+                        stream.setChar(1);
+                        ws.send(buffer);
+                    }
+
+                    renderer.domElement.ontouchend = e => {
+                        if (!settings.interactive) return;
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mouseclick);
+                        stream.setChar(0);
+                        ws.send(buffer);
                     }
                 });
             }
