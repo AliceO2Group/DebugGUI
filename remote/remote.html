@@ -2,26 +2,69 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<title>Remote DebugGUI</title>
+		<title>DebugGUI</title>
 		<style>
-			body { margin: 0; background: grey; }
+			body { margin: 0; background: grey; overflow: hidden; }
 		</style>
 	</head>
 	<body>
         <input type="text" id="ip" value="localhost">
         <input type="text" id="port"><button id="button" onclick="launch()">LAUNCH</button>
 		<script src="three.min.js"></script>
+		<script src="dat.gui.min.js"></script>
 		<script>
+            const opcodes = {
+                Control: 0,
+                Mousepos: 1,
+                Mouseclick: 2,
+                Mousewheel: 3,
+                Window: 4,
+                Latency: 5,
+                Keydown: 6,
+                Keyup: 7,
+                Charin: 8
+            };
+
+            const keys = {
+                Tab: 0,
+                ArrowLeft: 1,
+                ArrowRight: 2,
+                ArrowUp: 3,
+                ArrowDown: 4,
+                PageUp: 5,
+                PageDown: 6,
+                Home: 7,
+                End: 8,
+                Delete: 10,
+                Backspace: 11,
+                Enter: 13,
+                Escape: 14
+            };
+
+            const altKeys = {
+                a: 16,
+                c: 17,
+                v: 18,
+                x: 19,
+                y: 20,
+                z: 21
+            }
+
             function dataToStream(data) {
                 this.buffer = new DataView(data);
                 this.i = 0;
                 this.getInt = () => { const d = this.buffer.getInt32(this.i, true); this.i+=4; return d };
                 this.getFloat = () => { const d = this.buffer.getFloat32(this.i, true); this.i+=4; return d };
-                this.getShort = () => { const d = this.buffer.getInt16(this.i, true); this.i+=2; return d };
+                this.getShort = () => { const d = this.buffer.getUint16(this.i, true); this.i+=2; return d };
+                this.getChar = () => { const d = this.buffer.getInt8(this.i); this.i++; return d };
+
+                this.setInt = (val) => { this.buffer.setInt32(this.i, val, true); this.i+=4 };
+                this.setFloat = (val) => { this.buffer.setFloat32(this.i, val, true); this.i+=4 };
+                this.setShort = (val) => { this.buffer.setInt16(this.i, val, true); this.i+=2 };
+                this.setChar = (val) => { this.buffer.setInt8(this.i, val); this.i++ };
 
                 return this;
             }
-
 
             function launch() {
                 let input_port = document.getElementById("port");
@@ -39,6 +82,48 @@
                 new THREE.TextureLoader().load( "texture.png", ( map ) => {
                     let ws = new WebSocket("ws://" + ip + ":" + port, "dpl");
                     ws.binaryType = "arraybuffer";
+
+                    const settings = {
+                        interactive: false,
+                        latency: 200,
+                        fit: () => {
+                            let buffer = new ArrayBuffer(9);
+                            let stream = dataToStream(buffer);
+                            stream.setChar(opcodes.Window);
+                            stream.setInt(window.innerWidth);
+                            stream.setInt(window.innerHeight);
+                            ws.send(buffer);
+                        },
+                        input: "",
+                    };
+
+                    const gui = new dat.gui.GUI();
+                    console.log(gui)
+
+                    gui.add(settings, "interactive").onChange(() => {
+                        if (settings.interactive) {
+                            document.title = "DebugGUI [INTERACTIVE]";
+                        } else {
+                            document.title = "DebugGUI";
+                        }
+                    });
+
+                    gui.add(settings, "fit");
+
+                    gui.add(settings, "latency", 20, 1000).onChange(() => {
+                        let buffer = new ArrayBuffer(5);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(5);
+                        stream.setInt(settings.latency);
+                        ws.send(buffer);
+                    });
+
+                    gui.add(settings, "input").onChange(() => {
+                        settings.input = "";
+                        gui.__controllers[3].__input.value = "";
+                    });
+
+                    
 
                     let guniforms = {
                         tTex: { type: 't', value: null },
@@ -202,7 +287,6 @@
                     renderer.setScissorTest(true);
 
                     ws.onmessage = e => {
-                        //const drawData = JSON.parse(e.data);
                         const all_cmds = updateBuffersRaw(e.data);
                         let curr_base = 0;
                         renderer.clear();
@@ -212,6 +296,112 @@
                             renderer.render(scene, camera);
                             curr_base += cmd.cnt;
                         }
+                    }
+
+                    renderer.domElement.onmousemove = e => {
+                        if (!settings.interactive) return;
+                        let buffer = new ArrayBuffer(9);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mousepos);
+                        stream.setFloat(e.offsetX);
+                        stream.setFloat(e.offsetY);
+                        ws.send(buffer);
+                    }
+
+                    renderer.domElement.onmousedown = e => {
+                        if (!settings.interactive) return;
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mouseclick);
+                        stream.setChar(1);
+                        ws.send(buffer);
+                    }
+
+                    renderer.domElement.onmouseup = e => {
+                        if (!settings.interactive) return;
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mouseclick);
+                        stream.setChar(0);
+                        ws.send(buffer);
+                    }
+
+                    renderer.domElement.onwheel = e => {
+                        if (!settings.interactive) return;
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mousewheel);
+                        stream.setChar(e.wheelDelta > 0 ? 1 : -1);
+                        ws.send(buffer);
+                    }
+
+                    document.onkeydown = e => {
+                        if (!settings.interactive) return;
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Keydown);
+                        if (keys[e.key] !== undefined) {
+                            stream.setChar(keys[e.key]);
+                            ws.send(buffer);
+                        } else if (e.ctrlKey && altKeys[e.key] != undefined) {
+                            stream.setChar(altKeys[e.key]);
+                            ws.send(buffer);
+                        }
+                    }
+
+                    document.onkeyup = e => {
+                        if (!settings.interactive) return;
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Keyup);
+                        if (keys[e.key] !== undefined) {
+                            stream.setChar(keys[e.key]);
+                            ws.send(buffer);
+                        } else if (e.ctrlKey && altKeys[e.key] != undefined) {
+                            stream.setChar(altKeys[e.key]);
+                            ws.send(buffer);
+                        }
+                    }
+
+                    document.onkeypress = e => {
+                        if (!settings.interactive) return;
+                        if (e.key.length === 1) {
+                            let buffer = new ArrayBuffer(2);
+                            let stream = dataToStream(buffer);
+                            stream.setChar(opcodes.Charin);
+                            stream.setChar(e.key.charCodeAt(0));
+                            ws.send(buffer);
+                        }
+                    }
+
+                    renderer.domElement.ontouchmove = e => {
+                        if (!settings.interactive) return;
+                        e.preventDefault();
+                        let buffer = new ArrayBuffer(9);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mousepos);
+                        stream.setFloat(e.touches[0].clientX);
+                        stream.setFloat(e.touches[0].clientY);
+                        ws.send(buffer);
+                    }
+
+                    renderer.domElement.ontouchstart = e => {
+                        if (!settings.interactive) return;
+                        renderer.domElement.ontouchmove(e);
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mouseclick);
+                        stream.setChar(1);
+                        ws.send(buffer);
+                    }
+
+                    renderer.domElement.ontouchend = e => {
+                        if (!settings.interactive) return;
+                        let buffer = new ArrayBuffer(2);
+                        let stream = dataToStream(buffer);
+                        stream.setChar(opcodes.Mouseclick);
+                        stream.setChar(0);
+                        ws.send(buffer);
                     }
                 });
             }
