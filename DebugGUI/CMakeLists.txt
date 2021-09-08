@@ -30,6 +30,7 @@ if(APPLE)
       src/implot_items.cpp
 #      src/Sokol3DUtils.cxx
       src/HandMade3DImpl.cxx
+      src/DebugGUIHeadless.cxx
       src/DebugGUIMacos.mm)
   set(HEADERS
     src/imgui_extras.h
@@ -52,6 +53,7 @@ elseif(GLFW_FOUND)
       src/Sokol3DUtils.cxx
       src/GL3DUtils.cxx
       src/HandMade3DImpl.cxx
+      src/DebugGUIHeadless.cxx
       src/DebugGUI.cxx)
   set(HEADERS
     src/imgui_extras.h
