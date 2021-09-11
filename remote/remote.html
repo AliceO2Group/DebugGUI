@@ -10,7 +10,6 @@
 	<body>
         <input type="text" id="ip" value="localhost">
         <input type="text" id="port"><button id="button" onclick="launch()">LAUNCH</button>
-		<script src="three.min.js"></script>
 		<script src="dat.gui.min.js"></script>
 		<script>
             const opcodes = {
@@ -75,11 +74,14 @@
                 input_port.remove();
                 input_ip.remove();
                 button.remove();
+                document.body.style.background = "black";
                 main(ip, port);
             }
 
             function main(ip, port) {
-                new THREE.TextureLoader().load( "texture.png", ( map ) => {
+                const image = new Image();
+                image.src = "texture.png";
+                image.onload = () => {
                     let ws = new WebSocket("ws://" + ip + ":" + port, "dpl");
                     ws.binaryType = "arraybuffer";
 
@@ -98,7 +100,6 @@
                     };
 
                     const gui = new dat.gui.GUI();
-                    console.log(gui)
 
                     gui.add(settings, "interactive").onChange(() => {
                         if (settings.interactive) {
@@ -129,110 +130,160 @@
                         tTex: { type: 't', value: null },
                     };
 
-                    let ImVS = [
-                        "attribute float alpha;",
+                    let vsSrc = `
+                        attribute vec2 aPosition;
+                        attribute vec4 aColor;
+                        attribute mediump vec2 aUv;
 
-                        "varying vec3 vColor;",
-                        "varying vec2 vUv;",
-                        "varying float vAlpha;",
+                        varying vec4 vColor;
+                        varying vec2 vUv;
 
-                        "void main() {",
-                            "vColor = color;",
-                            "vUv = uv;",
-                            "vAlpha = alpha;",
-                            "gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);",
-                        "}"].join("\n");
+                        uniform mat4 uProjectionMatrix;
 
-                    let ImFS = [
-                        "varying vec3 vColor;",
-                        "varying vec2 vUv;",
-                        "varying float vAlpha;",
+                        void main() {
+                            vColor = aColor;
+                            vUv = aUv;
+                            gl_Position = uProjectionMatrix * vec4(aPosition, 0.0, 1.0);
+                        }`;
+
+                    let fsSrc = `
+                        varying mediump vec4 vColor;
+                        varying mediump vec2 vUv;
+
+                        uniform sampler2D tTex;
                         
-                        "uniform sampler2D tTex;",
+                        void main() {
+                            gl_FragColor = vec4(vColor.rgb, vColor.a * texture2D(tTex, vUv).a);
+                        }`;
 
-                        "void main() {",
-                            "gl_FragColor = vec4( vColor, texture2D(tTex, vUv).a * vAlpha);",
-                        "}" ].join("\n");
+                    
+                    const canvas = document.createElement("canvas");
+                    canvas.height = window.innerHeight;
+                    canvas.width = window.innerWidth;
+                    document.body.appendChild(canvas);
 
-                    let material = new THREE.ShaderMaterial({
-                        uniforms: guniforms,
-                        vertexShader: ImVS,
-                        fragmentShader: ImFS,
-                        vertexColors: THREE.VertexColors,
-                        transparent: true,
-                        side: THREE.DoubleSide
-                    });
+                    const gl = canvas.getContext("webgl");
+                    gl.enable(gl.SCISSOR_TEST);
+                    gl.enable(gl.BLEND);
+                    gl.blendEquation(gl.FUNC_ADD);
+                    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                    gl.disable(gl.CULL_FACE);
+                    gl.disable(gl.DEPTH_TEST);
 
-                    const scene = new THREE.Scene();
-                    let camera = new THREE.OrthographicCamera(0, window.innerWidth, 0, window.innerHeight, -1, 1);
-                    camera.position.z = 1;
+                    const vs = gl.createShader(gl.VERTEX_SHADER);
+                    gl.shaderSource(vs, vsSrc);
+                    gl.compileShader(vs);
+
+                    const fs = gl.createShader(gl.FRAGMENT_SHADER);
+                    gl.shaderSource(fs, fsSrc);
+                    gl.compileShader(fs);
+
+                    const shaderProgram = gl.createProgram();
+                    gl.attachShader(shaderProgram, vs);
+                    gl.attachShader(shaderProgram, fs);
+                    gl.linkProgram(shaderProgram);
+
+                    const texture = gl.createTexture();
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+                    gl.generateMipmap(gl.TEXTURE_2D);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+                    const MAX_VERTICES = 65535;
+
+                    const posArr = new Float32Array( MAX_VERTICES * 2 );
+                    const colorArr = new Float32Array( MAX_VERTICES * 4 );
+                    const uvArray = new Float32Array( MAX_VERTICES * 2 );
+                    const indexArray = new Uint16Array ( MAX_VERTICES );
+
+                    const positionBuffer = gl.createBuffer();
+                    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                    gl.bufferData(gl.ARRAY_BUFFER, posArr, gl.DYNAMIC_DRAW);
+
+                    const colorBuffer = gl.createBuffer();
+                    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                    gl.bufferData(gl.ARRAY_BUFFER, colorArr, gl.DYNAMIC_DRAW);
+
+                    const uvBuffer = gl.createBuffer();
+                    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+                    gl.bufferData(gl.ARRAY_BUFFER, uvArray, gl.DYNAMIC_DRAW);
+
+                    const indexBuffer = gl.createBuffer();
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexArray, gl.DYNAMIC_DRAW);
+
+                    const projMatrix = new Float32Array([
+                        2.0 / window.innerWidth, 0.0, 0.0, 0.0,
+                        0.0, 2.0 / -window.innerHeight, 0.0, 0.0,
+                        0.0, 0.0, -1.0, 0.0,
+                        -1.0, 1.0, 0.0, 1.0,
+                    ]);
 
                     window.addEventListener('resize', resizeCallback, false);
 
                     function resizeCallback() {
-                        camera = new THREE.OrthographicCamera(0, window.innerWidth, 0, window.innerHeight, -1, 1);
-                        camera.position.z = 1;
-                        renderer.setSize(window.innerWidth, window.innerHeight);
+                        projMatrix[0] = 2.0 / window.innerWidth;
+                        projMatrix[5] = 2.0 / -window.innerHeight;
+                        gl.uniformMatrix4fv(
+                            gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
+                            false,
+                            projMatrix
+                        );
+                        canvas.width = window.innerWidth;
+                        canvas.height = window.innerHeight;
+                        gl.viewport(0, 0, window.innerWidth, window.innerHeight);
                     }
 
-                    const MAX_VERTICES = 65535;
 
-                    geometry = new THREE.BufferGeometry();
-                    geometry.setIndex( new THREE.BufferAttribute( new Uint16Array ( MAX_VERTICES ), 1) );
-                    geometry.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array( MAX_VERTICES * 3 ), 3 ) );
-                    geometry.setAttribute( 'uv',       new THREE.BufferAttribute( new Float32Array( MAX_VERTICES * 2 ), 2 ) );
-                    geometry.setAttribute( 'color',    new THREE.BufferAttribute( new Float32Array( MAX_VERTICES * 3 ), 3 ) );
-                    geometry.setAttribute( 'alpha',    new THREE.BufferAttribute( new Float32Array( MAX_VERTICES     ), 1 ) );
-                    geometry.dynamic = true;
-                    geometry.offsets = [{start: 0, index: 0, count: 0}];
+                    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                    gl.vertexAttribPointer(
+                        gl.getAttribLocation(shaderProgram, "aPosition"),
+                        2,
+                        gl.FLOAT,
+                        false,
+                        0,
+                        0
+                    );
 
-                    const mesh = new THREE.Mesh(geometry, material);
-                    mesh.frustumCulled = false;
-                    scene.add(mesh);
+                    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                    gl.vertexAttribPointer(
+                        gl.getAttribLocation(shaderProgram, "aColor"),
+                        4,
+                        gl.FLOAT,
+                        false,
+                        0,
+                        0
+                    );
 
-                    const posArr = geometry.attributes.position.array;
-                    const colorArr = geometry.attributes.color.array;
-                    const alphaArr = geometry.attributes.alpha.array;
-                    const uvArray = geometry.attributes.uv.array;
-                    const indexArray = geometry.index.array;
+                    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+                    gl.vertexAttribPointer(
+                        gl.getAttribLocation(shaderProgram, "aUv"),
+                        2,
+                        gl.FLOAT,
+                        false,
+                        0,
+                        0
+                    );
+                        
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-                    function updateBuffers(data) {
-                        let idx = 0;
-                        let index_idx = 0;
-                        let index_length = 0;
-                        let vtx_length = 0;
-                        let all_cmds = []
-                        for (const cmd of data) {
-                            all_cmds.push(...cmd.cmd);
-                            for (let i = 0; i < cmd.vtx.length; ++i) {
-                                const raw_color = cmd.vtx[i][2];
-                                posArr[idx*3] = cmd.vtx[i][0];
-                                posArr[idx*3+1] = cmd.vtx[i][1];
-                                posArr[idx*3+2] = 0;
-                                colorArr[idx*3] = (raw_color & 255)/255;
-                                colorArr[idx*3+1] = (raw_color>>8 & 255)/255;
-                                colorArr[idx*3+2] = (raw_color>>16 & 255)/255;
-                                alphaArr[idx] = (raw_color>>24 & 255)/255;
-                                uvArray[idx*2] = cmd.vtx[i][3];
-                                uvArray[idx*2+1] = 1-cmd.vtx[i][4];
-                                idx++;
-                            }
-                            for (let i = 0; i < cmd.idx.length; ++i) {
-                                indexArray[index_idx] = cmd.idx[i] + vtx_length;
-                                index_idx++;
-                            }
-                            index_length += cmd.idx.length;
-                            vtx_length += cmd.vtx.length;
-                        }
-    
-                        geometry.attributes.position.needsUpdate = true;
-                        geometry.attributes.uv.needsUpdate = true;
-                        geometry.attributes.color.needsUpdate = true;
-                        geometry.attributes.alpha.needsUpdate = true;
-                        geometry.index.needsUpdate = true;
+                    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aPosition"));
+                    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aColor"));
+                    gl.enableVertexAttribArray(gl.getAttribLocation(shaderProgram, "aUv"));
+                    
+                    gl.useProgram(shaderProgram);
 
-                        return all_cmds;
-                    }
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.uniform1i(gl.getUniformLocation(shaderProgram, "tTex"), 0);
+
+
+                    gl.uniformMatrix4fv(
+                        gl.getUniformLocation(shaderProgram, "uProjectionMatrix"),
+                        false,
+                        projMatrix
+                    );
 
                     function updateBuffersRaw(data) {
                         data = dataToStream(data);
@@ -244,16 +295,15 @@
 
                         let idx = 0;
                         for (let i = 0; i < vtx_length; ++i) {
-                            posArr[i*3] = data.getFloat();
-                            posArr[i*3+1] = data.getFloat();
-                            posArr[i*3+2] = 0;
+                            posArr[i*2] = data.getFloat();
+                            posArr[i*2+1] = data.getFloat();
                             uvArray[i*2] = data.getFloat();
-                            uvArray[i*2+1] = 1-data.getFloat();
+                            uvArray[i*2+1] = data.getFloat();
                             const raw_color = data.getInt();
-                            colorArr[i*3] = (raw_color & 255)/255;
-                            colorArr[i*3+1] = (raw_color>>8 & 255)/255;
-                            colorArr[i*3+2] = (raw_color>>16 & 255)/255;
-                            alphaArr[i] = (raw_color>>24 & 255)/255;
+                            colorArr[i*4] = (raw_color & 255)/255;
+                            colorArr[i*4+1] = (raw_color>>8 & 255)/255;
+                            colorArr[i*4+2] = (raw_color>>16 & 255)/255;
+                            colorArr[i*4+3] = (raw_color>>24 & 255)/255;
                         }
                         for (let i = 0; i < idx_length; ++i) {
                             indexArray[i] = data.getShort();
@@ -266,39 +316,35 @@
                             });
                         }
 
-                        geometry.attributes.position.needsUpdate = true;
-                        geometry.attributes.uv.needsUpdate = true;
-                        geometry.attributes.color.needsUpdate = true;
-                        geometry.attributes.alpha.needsUpdate = true;
-                        geometry.index.needsUpdate = true;
+                        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, posArr);
+    
+                        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, colorArr);
+    
+                        gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, uvArray);
+    
+                        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                        gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, indexArray);
 
                         return all_cmds;
                     }
 
 
-                    map.needsUpdate = true;
-                    map.minFilter = map.magFilter = THREE.NearestFilter;
-                    guniforms.tTex.value = map;
-
-                    const renderer = new THREE.WebGLRenderer();
-                    renderer.autoClear = false;
-                    renderer.setSize(window.innerWidth, window.innerHeight);
-                    document.body.appendChild(renderer.domElement);
-                    renderer.setScissorTest(true);
-
                     ws.onmessage = e => {
                         const all_cmds = updateBuffersRaw(e.data);
+
+
                         let curr_base = 0;
-                        renderer.clear();
                         for (const cmd of all_cmds) {
-                            renderer.setScissor(cmd.clp[0], window.innerHeight - cmd.clp[3], cmd.clp[2] - cmd.clp[0], cmd.clp[3] - cmd.clp[1]);
-                            geometry.setDrawRange(curr_base, cmd.cnt);
-                            renderer.render(scene, camera);
+                            gl.scissor(cmd.clp[0], window.innerHeight - cmd.clp[3], cmd.clp[2] - cmd.clp[0], cmd.clp[3] - cmd.clp[1]);
+                            gl.drawElements(gl.TRIANGLES, cmd.cnt, gl.UNSIGNED_SHORT, curr_base*2);
                             curr_base += cmd.cnt;
                         }
                     }
 
-                    renderer.domElement.onmousemove = e => {
+                    canvas.onmousemove = e => {
                         if (!settings.interactive) return;
                         let buffer = new ArrayBuffer(9);
                         let stream = dataToStream(buffer);
@@ -308,7 +354,7 @@
                         ws.send(buffer);
                     }
 
-                    renderer.domElement.onmousedown = e => {
+                    canvas.onmousedown = e => {
                         if (!settings.interactive) return;
                         let buffer = new ArrayBuffer(2);
                         let stream = dataToStream(buffer);
@@ -317,7 +363,7 @@
                         ws.send(buffer);
                     }
 
-                    renderer.domElement.onmouseup = e => {
+                    canvas.onmouseup = e => {
                         if (!settings.interactive) return;
                         let buffer = new ArrayBuffer(2);
                         let stream = dataToStream(buffer);
@@ -326,7 +372,7 @@
                         ws.send(buffer);
                     }
 
-                    renderer.domElement.onwheel = e => {
+                    canvas.onwheel = e => {
                         if (!settings.interactive) return;
                         let buffer = new ArrayBuffer(2);
                         let stream = dataToStream(buffer);
@@ -374,7 +420,7 @@
                         }
                     }
 
-                    renderer.domElement.ontouchmove = e => {
+                    canvas.ontouchmove = e => {
                         if (!settings.interactive) return;
                         e.preventDefault();
                         let buffer = new ArrayBuffer(9);
@@ -385,9 +431,9 @@
                         ws.send(buffer);
                     }
 
-                    renderer.domElement.ontouchstart = e => {
+                    canvas.ontouchstart = e => {
                         if (!settings.interactive) return;
-                        renderer.domElement.ontouchmove(e);
+                        canvas.ontouchmove(e);
                         let buffer = new ArrayBuffer(2);
                         let stream = dataToStream(buffer);
                         stream.setChar(opcodes.Mouseclick);
@@ -395,7 +441,7 @@
                         ws.send(buffer);
                     }
 
-                    renderer.domElement.ontouchend = e => {
+                    canvas.ontouchend = e => {
                         if (!settings.interactive) return;
                         let buffer = new ArrayBuffer(2);
                         let stream = dataToStream(buffer);
@@ -403,7 +449,7 @@
                         stream.setChar(0);
                         ws.send(buffer);
                     }
-                });
+                };
             }
 		</script>
 	</body>
