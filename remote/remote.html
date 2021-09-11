@@ -124,12 +124,6 @@
                         gui.__controllers[3].__input.value = "";
                     });
 
-                    
-
-                    let guniforms = {
-                        tTex: { type: 't', value: null },
-                    };
-
                     let vsSrc = `
                         attribute vec2 aPosition;
                         attribute vec4 aColor;
@@ -192,22 +186,12 @@
 
                     const MAX_VERTICES = 65535;
 
-                    const posArr = new Float32Array( MAX_VERTICES * 2 );
-                    const colorArr = new Float32Array( MAX_VERTICES * 4 );
-                    const uvArray = new Float32Array( MAX_VERTICES * 2 );
                     const indexArray = new Uint16Array ( MAX_VERTICES );
+                    const vboArray = new ArrayBuffer( MAX_VERTICES * 20 );
 
-                    const positionBuffer = gl.createBuffer();
-                    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-                    gl.bufferData(gl.ARRAY_BUFFER, posArr, gl.DYNAMIC_DRAW);
-
-                    const colorBuffer = gl.createBuffer();
-                    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-                    gl.bufferData(gl.ARRAY_BUFFER, colorArr, gl.DYNAMIC_DRAW);
-
-                    const uvBuffer = gl.createBuffer();
-                    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
-                    gl.bufferData(gl.ARRAY_BUFFER, uvArray, gl.DYNAMIC_DRAW);
+                    const vbo = gl.createBuffer();
+                    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+                    gl.bufferData(gl.ARRAY_BUFFER, vboArray, gl.DYNAMIC_DRAW);
 
                     const indexBuffer = gl.createBuffer();
                     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -236,34 +220,31 @@
                     }
 
 
-                    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
                     gl.vertexAttribPointer(
                         gl.getAttribLocation(shaderProgram, "aPosition"),
                         2,
                         gl.FLOAT,
                         false,
-                        0,
+                        20,
                         0
                     );
 
-                    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
                     gl.vertexAttribPointer(
                         gl.getAttribLocation(shaderProgram, "aColor"),
                         4,
-                        gl.FLOAT,
-                        false,
-                        0,
-                        0
+                        gl.UNSIGNED_BYTE,
+                        true,
+                        20,
+                        16
                     );
 
-                    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
                     gl.vertexAttribPointer(
                         gl.getAttribLocation(shaderProgram, "aUv"),
                         2,
                         gl.FLOAT,
                         false,
-                        0,
-                        0
+                        20,
+                        8
                     );
                         
                     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -286,47 +267,35 @@
                     );
 
                     function updateBuffersRaw(data) {
-                        data = dataToStream(data);
-                        let all_cmds = []
+                        const dv = new DataView(data);
+                        const all_cmds = []
                         
-                        let vtx_length = data.getInt();
-                        let idx_length = data.getInt();
-                        let cmd_length = data.getInt();
+                        const vtx_length = dv.getInt32(0, true);
+                        const idx_length = dv.getInt32(4, true);
+                        const cmd_length = dv.getInt32(8, true);
 
-                        let idx = 0;
-                        for (let i = 0; i < vtx_length; ++i) {
-                            posArr[i*2] = data.getFloat();
-                            posArr[i*2+1] = data.getFloat();
-                            uvArray[i*2] = data.getFloat();
-                            uvArray[i*2+1] = data.getFloat();
-                            const raw_color = data.getInt();
-                            colorArr[i*4] = (raw_color & 255)/255;
-                            colorArr[i*4+1] = (raw_color>>8 & 255)/255;
-                            colorArr[i*4+2] = (raw_color>>16 & 255)/255;
-                            colorArr[i*4+3] = (raw_color>>24 & 255)/255;
-                        }
-                        for (let i = 0; i < idx_length; ++i) {
-                            indexArray[i] = data.getShort();
-                        }
-
+                        let cmd_offset = 12 + vtx_length*20 + idx_length*2;
                         for (let i = 0; i < cmd_length; ++i) {
                             all_cmds.push({
-                                cnt: data.getInt(),
-                                clp: [data.getFloat(), data.getFloat(), data.getFloat(), data.getFloat()]
+                                cnt: dv.getInt32(cmd_offset, true),
+                                clp: [
+                                    dv.getFloat32(cmd_offset + 4, true),
+                                    dv.getFloat32(cmd_offset + 8, true),
+                                    dv.getFloat32(cmd_offset + 12, true),
+                                    dv.getFloat32(cmd_offset + 16, true)
+                                ]
                             });
+                            cmd_offset += 20;
                         }
 
-                        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, posArr);
-    
-                        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, colorArr);
-    
-                        gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
-                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, uvArray);
+                        const localVbo = new DataView(data, 12, vtx_length * 20);
+                        const localIndex = new DataView(data, 12 + vtx_length*20, idx_length*2)
+
+                        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, localVbo);
     
                         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-                        gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, indexArray);
+                        gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, localIndex);
 
                         return all_cmds;
                     }
@@ -334,7 +303,6 @@
 
                     ws.onmessage = e => {
                         const all_cmds = updateBuffersRaw(e.data);
-
 
                         let curr_base = 0;
                         for (const cmd of all_cmds) {
