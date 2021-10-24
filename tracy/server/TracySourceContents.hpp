@@ -1,6 +1,7 @@
 #ifndef __TRACYSOURCECONTENTS_HPP__
 #define __TRACYSOURCECONTENTS_HPP__
 
+#include <cstddef>
 #include <stdint.h>
 #include <vector>
 
