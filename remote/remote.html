@@ -81,8 +81,8 @@
             function main(ip, port) {
                 const image = new Image();
                 //image.src = "texture.png";
-				image.src = imgSrc;
-				image.crossOrigin = "anonymous";
+		image.src = imgSrc;
+		image.crossOrigin = "anonymous";
                 image.onload = () => {
                     let ws = new WebSocket("ws://" + ip + ":" + port, "dpl");
                     ws.binaryType = "arraybuffer";
