@@ -95,6 +95,7 @@ void *initGUI(const char *name, void (*error_callback)(int, char const *descript
     ImGui::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
     ImGui::StyleColorsDark();
+    id<MTLDevice> device = MTLCreateSystemDefaultDevice();
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
@@ -129,6 +130,7 @@ void *initGUI(const char *name, void (*error_callback)(int, char const *descript
     if (io.Fonts->ConfigData.empty()) io.Fonts->AddFontDefault();
     //  io.Fonts->Build();
     io.DisplaySize = ImVec2(1280, 720);
+    ImGui_ImplMetal_Init(device);
   }
 
   ImPlot::CreateContext();
