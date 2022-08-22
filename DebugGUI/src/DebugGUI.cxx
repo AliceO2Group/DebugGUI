@@ -75,8 +75,12 @@ void* initGUI(const char* name, void(*error_callback)(int, char const*descriptio
   io.Fonts->AddFontDefault();
   static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
   ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true; icons_config.FontDataOwnedByAtlas = false;
-  io.Fonts->AddFontFromMemoryTTF((void*)s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf), 12.0f, &icons_config, icons_ranges);
-  
+  icons_config.GlyphOffset = {0, 2};
+  icons_config.GlyphMinAdvanceX = 17;
+  io.Fonts->AddFontFromMemoryTTF((void *)s_iconsFontAwesomeTtf,
+                                 sizeof(s_iconsFontAwesomeTtf), 13.0f,
+                                 &icons_config, icons_ranges);
+
   // this initializes the texture
   if (io.Fonts->ConfigData.empty())
     io.Fonts->AddFontDefault();
