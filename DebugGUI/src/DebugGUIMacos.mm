@@ -75,8 +75,11 @@ void *initGUI(const char *name, void (*error_callback)(int, char const *descript
     icons_config.MergeMode = true;
     icons_config.PixelSnapH = true;
     icons_config.FontDataOwnedByAtlas = false;
-    io.Fonts->AddFontFromMemoryTTF((void *)s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf),
-                                   12.0f, &icons_config, icons_ranges);
+    icons_config.GlyphOffset = {0, 2};
+    icons_config.GlyphMinAdvanceX = 17;
+    io.Fonts->AddFontFromMemoryTTF((void *)s_iconsFontAwesomeTtf,
+                                   sizeof(s_iconsFontAwesomeTtf), 13.0f,
+                                   &icons_config, icons_ranges);
 
     if (io.Fonts->ConfigData.empty()) io.Fonts->AddFontDefault();
     //  io.Fonts->Build();
@@ -123,9 +126,12 @@ void *initGUI(const char *name, void (*error_callback)(int, char const *descript
     ImFontConfig icons_config;
     icons_config.MergeMode = true;
     icons_config.PixelSnapH = true;
+    icons_config.GlyphOffset = {0, 2};
+    icons_config.GlyphMinAdvanceX = 17;
     icons_config.FontDataOwnedByAtlas = false;
-    io.Fonts->AddFontFromMemoryTTF((void *)s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf),
-                                   12.0f, &icons_config, icons_ranges);
+    io.Fonts->AddFontFromMemoryTTF((void *)s_iconsFontAwesomeTtf,
+                                   sizeof(s_iconsFontAwesomeTtf), 13.0f,
+                                   &icons_config, icons_ranges);
 
     if (io.Fonts->ConfigData.empty()) io.Fonts->AddFontDefault();
     //  io.Fonts->Build();
