@@ -159,7 +159,7 @@
                     canvas.width = window.innerWidth;
                     document.body.appendChild(canvas);
 
-                    const gl = canvas.getContext("webgl");
+                    const gl = canvas.getContext("webgl2");
                     gl.enable(gl.SCISSOR_TEST);
                     gl.enable(gl.BLEND);
                     gl.blendEquation(gl.FUNC_ADD);
@@ -187,9 +187,12 @@
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
+                    // Since the indexes are 16 bit, we cannot have more than 65536 vertices
+                    // at the same time.
                     const MAX_VERTICES = 65535;
 
                     const indexArray = new Uint16Array ( MAX_VERTICES );
+                    // 20 bytes per vertex. We cannot have more veritices than the index array
                     const vboArray = new ArrayBuffer( MAX_VERTICES * 20 );
 
                     const vbo = gl.createBuffer();
@@ -269,7 +272,8 @@
                         projMatrix
                     );
 
-                    function updateBuffersRaw(data) {
+                    ws.onmessage = e => {
+                        const data = e.data;
                         const dv = new DataView(data);
                         const all_cmds = []
                         
@@ -280,38 +284,44 @@
                         let cmd_offset = 12 + vtx_length*20 + idx_length*2;
                         for (let i = 0; i < cmd_length; ++i) {
                             all_cmds.push({
-                                cnt: dv.getInt32(cmd_offset, true),
+                                list_id: dv.getInt32(cmd_offset, true),
+                                cmd_id: dv.getInt32(cmd_offset + 4, true),
+                                cnt: dv.getInt32(cmd_offset + 8, true),
+                                vtxOff: dv.getInt32(cmd_offset + 12, true),
+                                idxOff: dv.getInt32(cmd_offset + 16, true),
+                                vtxCount: dv.getInt32(cmd_offset + 20, true),
+                                idxCount: dv.getInt32(cmd_offset + 24, true),
+                                vtxBase: dv.getInt32(cmd_offset + 28, true),
+                                idxBase: dv.getInt32(cmd_offset + 32, true),
                                 clp: [
-                                    dv.getFloat32(cmd_offset + 4, true),
-                                    dv.getFloat32(cmd_offset + 8, true),
-                                    dv.getFloat32(cmd_offset + 12, true),
-                                    dv.getFloat32(cmd_offset + 16, true)
-                                ]
+                                    dv.getFloat32(cmd_offset + 36, true),
+                                    dv.getFloat32(cmd_offset + 40, true),
+                                    dv.getFloat32(cmd_offset + 44, true),
+                                    dv.getFloat32(cmd_offset + 48, true)
+                                ],
                             });
-                            cmd_offset += 20;
+                            cmd_offset += 52;
                         }
 
-                        const localVbo = new DataView(data, 12, vtx_length * 20);
-                        const localIndex = new DataView(data, 12 + vtx_length*20, idx_length*2)
 
                         gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-                        gl.bufferSubData(gl.ARRAY_BUFFER, 0, localVbo);
-    
                         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-                        gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, localIndex);
+                        const localVbo = new DataView(data, 12, vtx_length*20);
+                        const localIndex = new DataView(data, 12 + vtx_length*20, idx_length*2)
 
-                        return all_cmds;
-                    }
-
-
-                    ws.onmessage = e => {
-                        const all_cmds = updateBuffersRaw(e.data);
-
-                        let curr_base = 0;
+                        // We need to rebind buffers every time, because webgl does not support
+                        // glDrawElementsBaseVertex
                         for (const cmd of all_cmds) {
+                            // vtxOff is reset for each command list, while vtxBase is 
+                            // keeps track of the base of the vertices for a given command list
+                            // we probaly overcopy the vertices, but there is no way to know
+                            // how many of them are actually used.
+                            gl.bufferSubData(gl.ARRAY_BUFFER, 0, localVbo, cmd.vtxOff*20 + cmd.vtxBase*20, cmd.vtxCount*20 - cmd.vtxOff*20);
+                            // We know that we want to render cnt elements, so we can simply copy those.
+                            gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, localIndex, cmd.idxOff*2 + cmd.idxBase*2, cmd.cnt*2);
+
                             gl.scissor(cmd.clp[0], window.innerHeight - cmd.clp[3], cmd.clp[2] - cmd.clp[0], cmd.clp[3] - cmd.clp[1]);
-                            gl.drawElements(gl.TRIANGLES, cmd.cnt, gl.UNSIGNED_SHORT, curr_base*2);
-                            curr_base += cmd.cnt;
+                            gl.drawElements(gl.TRIANGLES, cmd.cnt, gl.UNSIGNED_SHORT, 0);
                         }
                     }
 
