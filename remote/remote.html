@@ -185,9 +185,9 @@
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-                    const MAX_VERTICES = 65535;
+                    const MAX_VERTICES = 2*65535;
 
-                    const indexArray = new Uint16Array ( MAX_VERTICES );
+                    const indexArray = new Uint32Array ( MAX_VERTICES );
                     const vboArray = new ArrayBuffer( MAX_VERTICES * 20 );
 
                     const vbo = gl.createBuffer();
