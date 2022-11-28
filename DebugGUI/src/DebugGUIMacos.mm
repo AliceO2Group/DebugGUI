@@ -52,16 +52,19 @@ void *initGUI(const char *name, void (*error_callback)(int, char const *descript
     if (error_callback == nullptr) {
       glfwSetErrorCallback(default_error_callback);
     }
-    if (!glfwInit()) return nullptr;
+    if (!glfwInit()) {
+      return nullptr;
+    }
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     context = (DebugGUIContext *)(malloc(sizeof(DebugGUIContext)));
     window = glfwCreateWindow(1280, 720, name, nullptr, nullptr);
 
-    if (window == NULL) return 0;
+    if (window == nullptr) {
+      return nullptr;
+    }
 
     context->window = window;
     context->device = MTLCreateSystemDefaultDevice();
-    ;
     context->commandQueue = [context->device newCommandQueue];
 
     // Setup Platform/Renderer backends
@@ -77,11 +80,12 @@ void *initGUI(const char *name, void (*error_callback)(int, char const *descript
     icons_config.FontDataOwnedByAtlas = false;
     icons_config.GlyphOffset = {0, 2};
     icons_config.GlyphMinAdvanceX = 17;
-    io.Fonts->AddFontFromMemoryTTF((void *)s_iconsFontAwesomeTtf,
-                                   sizeof(s_iconsFontAwesomeTtf), 13.0f,
-                                   &icons_config, icons_ranges);
+    io.Fonts->AddFontFromMemoryTTF((void *)s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf),
+                                   13.0f, &icons_config, icons_ranges);
 
-    if (io.Fonts->ConfigData.empty()) io.Fonts->AddFontDefault();
+    if (io.Fonts->ConfigData.empty()) {
+      io.Fonts->AddFontDefault();
+    }
     //  io.Fonts->Build();
     io.DisplaySize = ImVec2(1280, 720);
     ImGui_ImplMetal_Init(context->device);
@@ -129,11 +133,12 @@ void *initGUI(const char *name, void (*error_callback)(int, char const *descript
     icons_config.GlyphOffset = {0, 2};
     icons_config.GlyphMinAdvanceX = 17;
     icons_config.FontDataOwnedByAtlas = false;
-    io.Fonts->AddFontFromMemoryTTF((void *)s_iconsFontAwesomeTtf,
-                                   sizeof(s_iconsFontAwesomeTtf), 13.0f,
-                                   &icons_config, icons_ranges);
+    io.Fonts->AddFontFromMemoryTTF((void *)s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf),
+                                   13.0f, &icons_config, icons_ranges);
 
-    if (io.Fonts->ConfigData.empty()) io.Fonts->AddFontDefault();
+    if (io.Fonts->ConfigData.empty()) {
+      io.Fonts->AddFontDefault();
+    }
     //  io.Fonts->Build();
     io.DisplaySize = ImVec2(1280, 720);
     ImGui_ImplMetal_Init(device);
@@ -154,7 +159,7 @@ bool pollGUIPreRender(void *context, float delta) {
     return true;
   }
 
-  DebugGUIContext *ctx = reinterpret_cast<DebugGUIContext *>(context);
+  auto *ctx = reinterpret_cast<DebugGUIContext *>(context);
   NSWindow *nswin = glfwGetCocoaWindow(ctx->window);
   if (glfwWindowShouldClose(ctx->window)) {
     return false;
@@ -186,7 +191,7 @@ void pollGUIPostRender(void *context, void *drawData) {
   if (!context) {
     return;
   }
-  DebugGUIContext *ctx = reinterpret_cast<DebugGUIContext *>(context);
+  auto *ctx = reinterpret_cast<DebugGUIContext *>(context);
   @autoreleasepool {
     auto drawable = [layer nextDrawable];
 
