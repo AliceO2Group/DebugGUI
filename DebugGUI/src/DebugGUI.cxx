@@ -48,6 +48,8 @@ void* initGUI(const char* name, void(*error_callback)(int, char const*descriptio
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     ImGui::StyleColorsDark();
+    // This is needed to support more than 2**16 vertices
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;

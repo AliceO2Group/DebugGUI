@@ -58,7 +58,15 @@ struct vtxContainer {
 };
 
 struct cmdContainer {
+  int list_id;
+  int cmd_id;
   int count;
+  int vtxOffset;
+  int idxOffset;
+  int vtxCount;
+  int idxCount;
+  int vtxBase;
+  int idxBase;
   float rectX, rectY, rectZ, rectW;
 };
 
@@ -109,31 +117,44 @@ void getFrameRaw(void *data, void **raw_data, int *size) {
     }
   }
 
-  int idx_offset = 0;
   short *data_idx_ptr = (short *)data_vtx_ptr;
   for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
     const auto cmd_list = draw_data->CmdLists[cmd_id];
+    auto &cmd = cmd_list->CmdBuffer[cmd_id];
 
     for (auto const &idx : cmd_list->IdxBuffer) {
-      *data_idx_ptr = idx + (short)idx_offset;
+      *data_idx_ptr = idx;
       data_idx_ptr++;
     }
-
-    idx_offset += cmd_list->VtxBuffer.size();
+    // Before  we move to the next Cmd, we need to offset all the 
+    // Vtx offset
   }
 
   cmdContainer *data_cmd_ptr = (cmdContainer *)data_idx_ptr;
-  for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
-    const auto cmd_list = draw_data->CmdLists[cmd_id];
+  int vtxBase = 0;
+  int idxBase = 0;
+  for (int list_id = 0; list_id < draw_data->CmdListsCount; ++list_id) {
+    const auto cmd_list = draw_data->CmdLists[list_id];
 
-    for (auto const &cmd : cmd_list->CmdBuffer) {
+    for (int cmd_id = 0; cmd_id < cmd_list->CmdBuffer.size(); ++cmd_id) {
+      const auto cmd = cmd_list->CmdBuffer[cmd_id];
+      data_cmd_ptr->list_id = list_id;
+      data_cmd_ptr->cmd_id = cmd_id;
       data_cmd_ptr->count = cmd.ElemCount;
+      data_cmd_ptr->vtxOffset = cmd.VtxOffset;
+      data_cmd_ptr->idxOffset = cmd.IdxOffset;
+      data_cmd_ptr->vtxCount = cmd_list->VtxBuffer.size();
+      data_cmd_ptr->idxCount = cmd_list->IdxBuffer.size();
+      data_cmd_ptr->vtxBase = vtxBase;
+      data_cmd_ptr->idxBase = idxBase;
       data_cmd_ptr->rectX = cmd.ClipRect.x;
       data_cmd_ptr->rectY = cmd.ClipRect.y;
       data_cmd_ptr->rectZ = cmd.ClipRect.z;
       data_cmd_ptr->rectW = cmd.ClipRect.w;
       data_cmd_ptr++;
     }
+    vtxBase += cmd_list->VtxBuffer.size();
+    idxBase += cmd_list->IdxBuffer.size();
   }
 
   *size = buffer_size;
