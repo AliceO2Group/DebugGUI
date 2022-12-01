@@ -4,60 +4,18 @@
 
 namespace o2::framework {
 
-// fills a stream with drawing data in JSON format
-// the JSON is composed of a list of draw commands
-/// FIXME: document the actual schema of the format.
-void getFrameJSON(void *data, std::ostream &json_data) {
-  ImDrawData *draw_data = (ImDrawData *)data;
+struct __attribute__((packed)) FrameInfo {
+  int vtx_count = 0;
+  int idx_count = 0;
+  int cmd_count = 0;
+};
 
-  json_data << "[";
-
-  for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
-    const auto cmd_list = draw_data->CmdLists[cmd_id];
-    const auto vtx_buffer = cmd_list->VtxBuffer;
-    const auto idx_buffer = cmd_list->IdxBuffer;
-    const auto cmd_buffer = cmd_list->CmdBuffer;
-
-    json_data << "{\"vtx\":[";
-    for (int i = 0; i < vtx_buffer.size(); ++i) {
-      auto v = vtx_buffer[i];
-      json_data << "[" << v.pos.x << "," << v.pos.y << "," << v.col << ','
-                << v.uv.x << "," << v.uv.y << "]";
-      if (i < vtx_buffer.size() - 1)
-        json_data << ",";
-    }
-
-    json_data << "],\"idx\":[";
-    for (int i = 0; i < idx_buffer.size(); ++i) {
-      auto id = idx_buffer[i];
-      json_data << id;
-      if (i < idx_buffer.size() - 1)
-        json_data << ",";
-    }
-
-    json_data << "],\"cmd\":[";
-    for (int i = 0; i < cmd_buffer.size(); ++i) {
-      auto cmd = cmd_buffer[i];
-      json_data << "{\"cnt\":" << cmd.ElemCount << ", \"clp\":["
-                << cmd.ClipRect.x << "," << cmd.ClipRect.y << ","
-                << cmd.ClipRect.z << "," << cmd.ClipRect.w << "]}";
-      if (i < cmd_buffer.size() - 1)
-        json_data << ",";
-    }
-    json_data << "]}";
-    if (cmd_id < draw_data->CmdListsCount - 1)
-      json_data << ",";
-  }
-
-  json_data << "]";
-}
-
-struct vtxContainer {
+struct __attribute__((packed)) vtxContainer {
   float posX, posY, uvX, uvY;
   int col;
 };
 
-struct cmdContainer {
+struct __attribute__((packed)) cmdContainer {
   int list_id;
   int cmd_id;
   int count;
@@ -75,62 +33,44 @@ struct cmdContainer {
 // the returned buffer must be freed by the caller.
 /// FIXME: document actual schema of the format
 void getFrameRaw(void *data, void **raw_data, int *size) {
-  ImDrawData *draw_data = (ImDrawData *)data;
+  auto *draw_data = (ImDrawData *)data;
+  FrameInfo frameInfo;
 
   // compute sizes
-  int buffer_size = sizeof(int) * 3, vtx_count = 0, idx_count = 0,
-      cmd_count = 0;
+  int buffer_size = sizeof(int) * 3;
   for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
     const auto cmd_list = draw_data->CmdLists[cmd_id];
 
-    vtx_count += cmd_list->VtxBuffer.size();
+    frameInfo.vtx_count += cmd_list->VtxBuffer.size();
     buffer_size += cmd_list->VtxBuffer.size() * (sizeof(vtxContainer));
 
-    idx_count += cmd_list->IdxBuffer.size();
+    frameInfo.idx_count += cmd_list->IdxBuffer.size();
     buffer_size += cmd_list->IdxBuffer.size() * (sizeof(short));
 
-    cmd_count += cmd_list->CmdBuffer.size();
+    frameInfo.cmd_count += cmd_list->CmdBuffer.size();
     buffer_size += cmd_list->CmdBuffer.size() * (sizeof(cmdContainer));
   }
 
-  void *local_data_base = malloc(buffer_size);
+  void *local_data_base = (char *)malloc(buffer_size);
+  char *ptr = (char *)local_data_base;
 
-  int *data_header_ptr = (int *)local_data_base;
-  *data_header_ptr = vtx_count;
-  data_header_ptr++;
-  *data_header_ptr = idx_count;
-  data_header_ptr++;
-  *data_header_ptr = cmd_count;
-  data_header_ptr++;
+  memcpy(ptr, &frameInfo, sizeof(FrameInfo));
+  ptr += sizeof(FrameInfo);
 
-  vtxContainer *data_vtx_ptr = (vtxContainer *)data_header_ptr;
   for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
     const auto cmd_list = draw_data->CmdLists[cmd_id];
-
-    for (auto const &vtx : cmd_list->VtxBuffer) {
-      data_vtx_ptr->posX = vtx.pos.x;
-      data_vtx_ptr->posY = vtx.pos.y;
-      data_vtx_ptr->uvX = vtx.uv.x;
-      data_vtx_ptr->uvY = vtx.uv.y;
-      data_vtx_ptr->col = vtx.col;
-      data_vtx_ptr++;
-    }
+    memcpy(ptr, cmd_list->VtxBuffer.Data,
+           cmd_list->VtxBuffer.size() * sizeof(ImDrawVert));
+    ptr += cmd_list->VtxBuffer.size() * sizeof(ImDrawVert);
   }
 
-  short *data_idx_ptr = (short *)data_vtx_ptr;
   for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
     const auto cmd_list = draw_data->CmdLists[cmd_id];
-    auto &cmd = cmd_list->CmdBuffer[cmd_id];
-
-    for (auto const &idx : cmd_list->IdxBuffer) {
-      *data_idx_ptr = idx;
-      data_idx_ptr++;
-    }
-    // Before  we move to the next Cmd, we need to offset all the 
-    // Vtx offset
+    memcpy(ptr, cmd_list->IdxBuffer.Data,
+           cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx));
+    ptr += cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx);
   }
 
-  cmdContainer *data_cmd_ptr = (cmdContainer *)data_idx_ptr;
   int vtxBase = 0;
   int idxBase = 0;
   for (int list_id = 0; list_id < draw_data->CmdListsCount; ++list_id) {
@@ -138,20 +78,22 @@ void getFrameRaw(void *data, void **raw_data, int *size) {
 
     for (int cmd_id = 0; cmd_id < cmd_list->CmdBuffer.size(); ++cmd_id) {
       const auto cmd = cmd_list->CmdBuffer[cmd_id];
-      data_cmd_ptr->list_id = list_id;
-      data_cmd_ptr->cmd_id = cmd_id;
-      data_cmd_ptr->count = cmd.ElemCount;
-      data_cmd_ptr->vtxOffset = cmd.VtxOffset;
-      data_cmd_ptr->idxOffset = cmd.IdxOffset;
-      data_cmd_ptr->vtxCount = cmd_list->VtxBuffer.size();
-      data_cmd_ptr->idxCount = cmd_list->IdxBuffer.size();
-      data_cmd_ptr->vtxBase = vtxBase;
-      data_cmd_ptr->idxBase = idxBase;
-      data_cmd_ptr->rectX = cmd.ClipRect.x;
-      data_cmd_ptr->rectY = cmd.ClipRect.y;
-      data_cmd_ptr->rectZ = cmd.ClipRect.z;
-      data_cmd_ptr->rectW = cmd.ClipRect.w;
-      data_cmd_ptr++;
+      cmdContainer op;
+      op.list_id = list_id;
+      op.cmd_id = cmd_id;
+      op.count = cmd.ElemCount;
+      op.vtxOffset = cmd.VtxOffset;
+      op.idxOffset = cmd.IdxOffset;
+      op.vtxCount = cmd_list->VtxBuffer.size();
+      op.idxCount = cmd_list->IdxBuffer.size();
+      op.vtxBase = vtxBase;
+      op.idxBase = idxBase;
+      op.rectX = cmd.ClipRect.x;
+      op.rectY = cmd.ClipRect.y;
+      op.rectZ = cmd.ClipRect.z;
+      op.rectW = cmd.ClipRect.w;
+      memcpy(ptr, &op, sizeof(cmdContainer));
+      ptr += sizeof(cmdContainer);
     }
     vtxBase += cmd_list->VtxBuffer.size();
     idxBase += cmd_list->IdxBuffer.size();
@@ -160,4 +102,5 @@ void getFrameRaw(void *data, void **raw_data, int *size) {
   *size = buffer_size;
   *raw_data = local_data_base;
 }
+
 } // namespace o2::framework
