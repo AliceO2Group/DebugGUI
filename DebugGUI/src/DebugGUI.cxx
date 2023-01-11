@@ -1,11 +1,12 @@
 #include "imgui.h"
 #include "implot.h"
-#include "imgui_impl_glfw_gl3.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "GL/gl3w.h"
 #include "icons_font_awesome.h"
 // Needed by icons_font_awesome.ttf.h
 #include <cstdint>
 #include "icons_font_awesome.ttf.h"
-#include "GL/gl3w.h" // This example is using gl3w to access OpenGL functions (because it is small). You may use glew/glad/glLoadGen/etc. whatever already works for you.
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include <functional>
@@ -43,7 +44,9 @@ void* initGUI(const char* name, void(*error_callback)(int, char const*descriptio
     gl3wInit();
 
     // Setup ImGui binding
-    ImGui_ImplGlfwGL3_Init(window, true);
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init();
   } else {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -102,7 +105,9 @@ bool pollGUIPreRender(void* context, float delta)
       return false;
     }
     glfwPollEvents();
-    ImGui_ImplGlfwGL3_NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 
     // Clearing the viewport
     int display_w, display_h;
@@ -139,7 +144,7 @@ void pollGUIPostRender(void* context, void *draw_data)
   if (context) {
     GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
 
-    ImGui_ImplGlfwGL3_RenderDrawLists((ImDrawData*)draw_data);
+    ImGui_ImplOpenGL3_RenderDrawData((ImDrawData*)draw_data);
     glfwSwapBuffers(window);
   }
 }
@@ -160,7 +165,8 @@ void disposeGUI()
 {
   ImPlot::DestroyContext();
   // Cleanup
-  ImGui_ImplGlfwGL3_Shutdown();
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
   glfwTerminate();
 }
 

@@ -3,9 +3,10 @@
 
 #include "imgui.h"
 #include "implot.h"
-#include "imgui_impl_glfw_gl3.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "imgui_impl_opengl3_loader.h"
 #include <cstdio>
-#include "GL/gl3w.h"    // This example is using gl3w to access OpenGL functions (because it is small). You may use glew/glad/glLoadGen/etc. whatever already works for you.
 #include <GLFW/glfw3.h>
 
 static void error_callback(int error, const char* description)
@@ -27,10 +28,11 @@ int main(int, char**)
 #endif
     GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui OpenGL3 example", nullptr, nullptr);
     glfwMakeContextCurrent(window);
-    gl3wInit();
 
     // Setup ImGui binding
-    ImGui_ImplGlfwGL3_Init(window, true);
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init();
 
     // Load Fonts
     // (there is a default font, this is only if you want to change it. see extra_fonts/README.txt for more details)
@@ -53,7 +55,9 @@ int main(int, char**)
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
-        ImGui_ImplGlfwGL3_NewFrame();
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
@@ -92,18 +96,20 @@ int main(int, char**)
 
 
         // Rendering
+        ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
-        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         glfwSwapBuffers(window);
     }
 
     ImPlot::DestroyContext();
     // Cleanup
-    ImGui_ImplGlfwGL3_Shutdown();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
     glfwTerminate();
 
     return 0;
