@@ -68,7 +68,7 @@ void *initGUI(const char *name, void (*error_callback)(int, char const *descript
     context->commandQueue = [context->device newCommandQueue];
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(context->window, true);
+    ImGui_ImplGlfw_InitForOther(context->window, true);
     // Load Fonts
     // (there is a default font, this is only if you want to change it. see
     // extra_fonts/README.txt for more details)

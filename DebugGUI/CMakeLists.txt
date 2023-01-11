@@ -46,7 +46,8 @@ if(APPLE)
   set(GUI_TARGET glfw)
 elseif(GLFW_FOUND)
   set(GUI_BACKEND
-      src/imgui_impl_glfw_gl3.cpp
+      src/imgui_impl_glfw.cpp
+      src/imgui_impl_opengl3.cpp
       src/implot.cpp
       src/implot_items.cpp
       src/gl3w.c
@@ -64,7 +65,8 @@ elseif(GLFW_FOUND)
     src/Sokol3DUtils.h
     src/GL3DUtils.h
     src/DebugGUI.h
-    src/imgui_impl_glfw_gl3.h
+    src/imgui_impl_opengl3.h
+    src/imgui_impl_glfw.h
     src/icons_font_awesome.h
   )
   set(GUI_TARGET glfw)
