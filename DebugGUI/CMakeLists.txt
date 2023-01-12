@@ -22,6 +22,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 #endif()
 
+
 if(APPLE)
   set(GUI_BACKEND
       src/imgui_impl_metal.mm
@@ -38,6 +39,7 @@ if(APPLE)
     src/implot.h
     src/implot_internal.h
     src/imconfig.h
+    src/DebugGUIAPIv2.h
 #    src/Sokol3DUtils.h
     src/DebugGUI.h
     src/imgui_impl_glfw.h
@@ -65,6 +67,7 @@ elseif(GLFW_FOUND)
     src/Sokol3DUtils.h
     src/GL3DUtils.h
     src/DebugGUI.h
+    src/DebugGUIAPIv2.h
     src/imgui_impl_opengl3.h
     src/imgui_impl_glfw.h
     src/icons_font_awesome.h
@@ -81,6 +84,7 @@ else()
     src/Sokol3DUtils.h
     src/GL3DUtils.h
     src/DebugGUI.h
+    src/DebugGUIAPIv2.h
     src/imgui_impl_glfw_gl3.h
     src/icons_font_awesome.h
   )
