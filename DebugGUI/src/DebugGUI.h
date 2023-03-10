@@ -20,7 +20,8 @@ void default_error_callback(int, const char*);
 
 void* initGUI(const char* name, decltype(default_error_callback) = nullptr);
 bool pollGUI(void *context, std::function<void(void)> guiCallback);
-void getFrameRaw(void *data, void **raw_data, int *size);
+void getFrameRaw(void *data, void **raw_data, int *size,
+                 bool includeTextures = false);
 bool pollGUIPreRender(void* context, float delta);
 void* pollGUIRender(std::function<void(void)> guiCallback);
 void pollGUIPostRender(void* context, void* draw_data);
