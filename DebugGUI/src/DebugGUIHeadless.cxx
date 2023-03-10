@@ -8,11 +8,20 @@ struct __attribute__((packed)) FrameInfo {
   int vtx_count = 0;
   int idx_count = 0;
   int cmd_count = 0;
+  int txt_count = 0; // How many textures are there
 };
 
 struct __attribute__((packed)) vtxContainer {
   float posX, posY, uvX, uvY;
   int col;
+};
+
+// Texture information
+struct __attribute__((packed)) txtHeader {
+  int width, height; /// Size of the texture, in pixels
+  int format;        /// Format of the texture, 0 = RGBA, 1 = RGB, 2 = Luminance
+  int size;          /// Size in bytes of the texture
+  int id;            /// Id of the texture
 };
 
 struct __attribute__((packed)) cmdContainer {
@@ -32,12 +41,12 @@ struct __attribute__((packed)) cmdContainer {
 // ready to be sent and its size.
 // the returned buffer must be freed by the caller.
 /// FIXME: document actual schema of the format
-void getFrameRaw(void *data, void **raw_data, int *size) {
+void getFrameRaw(void *data, void **raw_data, int *size, bool includeTextures) {
   auto *draw_data = (ImDrawData *)data;
   FrameInfo frameInfo;
 
   // compute sizes
-  int buffer_size = sizeof(int) * 3;
+  int buffer_size = sizeof(int) * 4;
   for (int cmd_id = 0; cmd_id < draw_data->CmdListsCount; ++cmd_id) {
     const auto cmd_list = draw_data->CmdLists[cmd_id];
 
@@ -49,6 +58,14 @@ void getFrameRaw(void *data, void **raw_data, int *size) {
 
     frameInfo.cmd_count += cmd_list->CmdBuffer.size();
     buffer_size += cmd_list->CmdBuffer.size() * (sizeof(cmdContainer));
+  }
+
+  // For now this only includes the font atlas in RGBA32 format
+  if (includeTextures) {
+    frameInfo.txt_count += 1;
+    ImGuiIO &io = ImGui::GetIO();
+    ImFontAtlas *atlas = io.Fonts;
+    buffer_size += (sizeof(txtHeader)) + atlas->TexWidth * atlas->TexHeight * 4;
   }
 
   void *local_data_base = (char *)malloc(buffer_size);
@@ -97,6 +114,23 @@ void getFrameRaw(void *data, void **raw_data, int *size) {
     }
     vtxBase += cmd_list->VtxBuffer.size();
     idxBase += cmd_list->IdxBuffer.size();
+  }
+
+  // For now we only include the font atlas
+  if (includeTextures) {
+    ImGuiIO &io = ImGui::GetIO();
+    ImFontAtlas *atlas = io.Fonts;
+    txtHeader header;
+    header.width = atlas->TexWidth;
+    header.height = atlas->TexHeight;
+    header.format = 0;
+    header.size = atlas->TexWidth * atlas->TexHeight * 4;
+
+    header.id = 0;
+    memcpy(ptr, &header, sizeof(txtHeader));
+    ptr += sizeof(txtHeader);
+    memcpy(ptr, atlas->TexPixelsRGBA32, header.size);
+    ptr += header.size;
   }
 
   *size = buffer_size;
