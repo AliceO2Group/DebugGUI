@@ -121,15 +121,20 @@ void getFrameRaw(void *data, void **raw_data, int *size, bool includeTextures) {
     ImGuiIO &io = ImGui::GetIO();
     ImFontAtlas *atlas = io.Fonts;
     txtHeader header;
-    header.width = atlas->TexWidth;
-    header.height = atlas->TexHeight;
+    unsigned char *txtPtr = nullptr;
+    int width = 0;
+    int height = 0;
+    int bytesPerPixel = 0;
+    atlas->GetTexDataAsRGBA32(&txtPtr, &width, &height, &bytesPerPixel);
+    header.width = width;
+    header.height = height;
     header.format = 0;
-    header.size = atlas->TexWidth * atlas->TexHeight * 4;
+    header.size = width * height * bytesPerPixel;
 
     header.id = 0;
     memcpy(ptr, &header, sizeof(txtHeader));
     ptr += sizeof(txtHeader);
-    memcpy(ptr, atlas->TexPixelsRGBA32, header.size);
+    memcpy(ptr, txtPtr, header.size);
     ptr += header.size;
   }
 
