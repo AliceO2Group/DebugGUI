@@ -40,6 +40,7 @@ if(APPLE)
     src/implot_internal.h
     src/imconfig.h
     src/DebugGUIAPIv2.h
+    src/DebugGUIAPIv3.h
 #    src/Sokol3DUtils.h
     src/DebugGUI.h
     src/imgui_impl_glfw.h
@@ -68,6 +69,7 @@ elseif(GLFW_FOUND)
     src/GL3DUtils.h
     src/DebugGUI.h
     src/DebugGUIAPIv2.h
+    src/DebugGUIAPIv3.h
     src/imgui_impl_opengl3.h
     src/imgui_impl_glfw.h
     src/icons_font_awesome.h
@@ -85,6 +87,7 @@ else()
     src/GL3DUtils.h
     src/DebugGUI.h
     src/DebugGUIAPIv2.h
+    src/DebugGUIAPIv3.h
     src/imgui_impl_glfw_gl3.h
     src/icons_font_awesome.h
   )

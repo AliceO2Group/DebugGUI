@@ -101,9 +101,6 @@ bool pollGUIPreRender(void* context, float delta)
   if (context) {
     GLFWwindow* window = reinterpret_cast<GLFWwindow*>(context);
 
-    if (glfwWindowShouldClose(window)) {
-      return false;
-    }
     glfwPollEvents();
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -116,6 +113,10 @@ bool pollGUIPreRender(void* context, float delta)
     ImVec4 clear_color = ImColor(114, 144, 154);
     glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    if (glfwWindowShouldClose(window)) {
+      return false;
+    }
   } else {
     // Just initialize new frame
     ImGuiIO& io = ImGui::GetIO();
