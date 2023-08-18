@@ -161,9 +161,6 @@ bool pollGUIPreRender(void *context, float delta) {
 
   auto *ctx = reinterpret_cast<DebugGUIContext *>(context);
   NSWindow *nswin = glfwGetCocoaWindow(ctx->window);
-  if (glfwWindowShouldClose(ctx->window)) {
-    return false;
-  }
   @autoreleasepool {
     glfwPollEvents();
     int width, height;
@@ -183,8 +180,7 @@ bool pollGUIPreRender(void *context, float delta) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
   }
-
-  return true;
+  return glfwWindowShouldClose(ctx->window) == false;
 }
 
 void pollGUIPostRender(void *context, void *drawData) {
